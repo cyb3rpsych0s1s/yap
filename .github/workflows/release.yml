@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+      - "rc*"
+      - "beta*"
+      - "alpha*"
+
+env:
+  CARGO_TERM_COLOR: always
+  IS_DRAFT: ${{ startsWith(github.ref_name, 'beta') || startsWith(github.ref_name, 'alpha') }}
+  IS_PRERELEASE: true
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  hook:
+    uses: ./.github/workflows/bundle.yml
+    with:
+      tag: ${{ github.ref_name }}
+      hook: true
+  no-hook:
+    uses: ./.github/workflows/bundle.yml
+    with:
+      tag: ${{ github.ref_name }}
+      hook: false
+  release:
+    if: ${{ startsWith(github.event.ref, 'refs/tags') }}
+    runs-on: windows-2025
+    needs: [hook, no-hook]
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v8
+        with:
+          path: release
+          merge-multiple: true
+      - name: Create release ${{ github.ref_name }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "release/*"
+          draft: ${{ env.IS_DRAFT }}
+          prerelease: ${{ env.IS_PRERELEASE }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifactErrorsFailBuild: true

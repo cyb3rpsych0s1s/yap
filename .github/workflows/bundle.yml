@@ -1,0 +1,74 @@
+name: Bundle
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Git tag"
+        required: true
+        type: string
+      hook:
+        description: "Build with the default `hook` feature"
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Binary name suffix"
+        required: true
+        type: string
+      hook:
+        description: "Hook build ? (otherwise NO_HOOK)"
+        required: true
+        default: true
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+  BIN-FOLDER: bundle${{ !inputs.hook && '-no-hook' || '' }}
+  BUILD-FEATURES: ${{ inputs.hook && 'default' || 'no-default' }}
+  ARTIFACT-NAME: Yap-windows-${{ inputs.tag }}${{ !inputs.hook && '-NO_HOOK' || '' }}
+
+jobs:
+  bundle:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release
+      - name: Additional tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - name: Bundle mod files
+        run: just ci Yap ${{ env.BIN-FOLDER }} ${{ env.BUILD-FEATURES }}
+      - name: Zip files
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: zip
+          filename: ${{ env.ARTIFACT-NAME }}.zip
+          directory: ${{ env.BIN-FOLDER }}/bin
+          path: .
+      - name: Zip .pdb
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: zip
+          filename: ${{ env.ARTIFACT-NAME }}-PDB.zip
+          directory: ${{ env.BIN-FOLDER }}/pdb
+          path: .
+      - name: Upload files
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT-NAME }}
+          path: ${{ env.BIN-FOLDER }}/bin/${{ env.ARTIFACT-NAME }}.zip
+          if-no-files-found: error
+      - name: Upload .pdb
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT-NAME }}-PDB
+          path: ${{ env.BIN-FOLDER }}/pdb/${{ env.ARTIFACT-NAME }}-PDB.zip
+          if-no-files-found: error
