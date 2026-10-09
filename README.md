@@ -122,7 +122,7 @@ Each kind of line, as `just log yap` prints it (trace run, debug build):
 [2026-10-09 18:13:07.445] [info    ] [ 60776] [yap] [cat] 🔷 [ red4 ] clear registry
 ```
 
-### yap itself
+### from yap itself
 
 ```text
 [2026-10-09 18:12:51.637] [debug   ] [ 48396] [yap] 🌱 [ red4 ] Plugin/OnLoad
