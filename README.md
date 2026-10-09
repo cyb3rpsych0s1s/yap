@@ -62,6 +62,39 @@ Lands in `<game>/red4ext/logs/yap-*.log` as:
 Set `level = "debug"` (or `"trace"`) in `red4ext/config.ini`
 to also see `Debug` / `Trace` lines.
 
+## output
+
+Each kind of line in `just log yap`,
+without RED4ext's `[timestamp] [thread] [yap]` prefix:
+
+```text
+# scripts (Yap.*)
+[error   ] 🔴 [ reds ] Yap.YapService::OnLoad Error WaWaWaWa
+[warning ] 🔶 [ reds ] Yap.YapService::OnLoad Warn WaWaWaWa
+[info    ] 🔷 [ reds ] Cat.CatServiceDebug::OnLoad calling Yap from Cat
+[debug   ] 🌱 [ reds ] Yap.YapService::OnLoad Service/OnLoad
+[debug   ] 🔹 [ reds ] Yap.YapService::OnLoad Debug WaWaWaWa
+[trace   ] • [ reds ] Yap.YapService::OnLoad Trace WaWaWaWa
+# FTLog (hooks), without caller when called from native code
+[info    ] [FTLog] Yap.YapService::OnLoad FTLog WaWaWaWa
+[info    ] [FTLog] Audioware initialized successfully!
+# other plugins (hooks)
+[info    ] [octopak] on RTTI post register
+[info    ] [cat] 🔷 [ red4 ] clear registry
+# yap itself
+[debug   ] 🌱 [ red4 ] Plugin/OnLoad
+[info    ] 🔷 [ red4 ] attached 24/24 Logger hooks, skipped: []
+```
+
+Debug builds also color them:
+
+| Part | Color |
+| --- | --- |
+| `[ red4 ]` | yellow |
+| `[ reds ]` | red |
+| `[FTLog]`, `Class::Func` caller | grey |
+| `[<plugin>]` | purple |
+
 ## build
 
 Requires [just][just]. Set `GAME_DIR` in a `.env`
