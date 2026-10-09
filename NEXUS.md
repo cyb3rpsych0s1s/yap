@@ -65,6 +65,11 @@ Lines land in [font=Courier New]Cyberpunk 2077/red4ext/logs/yap-*.log[/font], fo
 
 Set [font=Courier New]level = "debug"[/font] (or [font=Courier New]"trace"[/font]) in [font=Courier New]red4ext/config.ini[/font] to also see [font=Courier New]Debug[/font] / [font=Courier New]Trace[/font] lines.
 
+Lines are colored with ANSI escape codes, which look like [font=Courier New][33m[/font] noise in a plain text editor. To turn colors off, create [font=Courier New]Cyberpunk 2077/red4ext/plugins/yap/config.ini[/font] with:
+[code][logging]
+colors = false[/code]
+or set the [url=https://no-color.org]NO_COLOR[/url] environment variable.
+
 What each kind of line looks like (hooked flavor):
 [code][2026-10-09 18:12:56.277] [error   ] [ 48396] [yap] 🔴 [ reds ] Yap.YapService::OnLoad Error WaWaWaWa
 [2026-10-09 18:12:56.277] [warning ] [ 48396] [yap] 🔶 [ reds ] Yap.YapService::OnLoad Warn WaWaWaWa
