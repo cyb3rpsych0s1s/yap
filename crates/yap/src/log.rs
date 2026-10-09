@@ -53,7 +53,12 @@ pub(crate) fn init() {
     match config.as_deref().map(|path| (path, read_level(path))) {
         Some((path, Some(level))) => {
             let _ = MIN_LEVEL.set(level);
-            red4::trace!("RED4ext log level: {} ({})", LEVELS[level], path.display());
+            // the config path only helps when diagnosing
+            if enabled(DEBUG) {
+                red4::info!("RED4ext log level: {} ({})", LEVELS[level], path.display());
+            } else {
+                red4::info!("RED4ext log level: {}", LEVELS[level]);
+            }
         }
         Some((path, None)) => red4::warn!("unable to read [logging] level from {}", path.display()),
         None => red4::warn!("unable to locate RED4ext's {CONFIG}"),
