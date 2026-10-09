@@ -3,6 +3,7 @@ on:
   push:
     paths-ignore:
       - "**/*.md"
+      - "**/*.png"
       - "**/.markdownlint.json"
 
 env:
