@@ -90,7 +90,11 @@ Each kind of line, as `just log yap` prints it (trace run, debug build):
 ```text
 [2026-10-09 18:12:51.888] [info    ] [ 48396] [yap] [octopak] on RTTI post register
 [2026-10-09 18:13:07.445] [info    ] [ 60776] [yap] [cat] 🔷 [ red4 ] clear registry
-# yap itself
+```
+
+### yap itself
+
+```text
 [2026-10-09 18:12:51.637] [debug   ] [ 48396] [yap] 🌱 [ red4 ] Plugin/OnLoad
 [2026-10-09 18:12:51.668] [info    ] [ 48396] [yap] 🔷 [ red4 ] attached 24/24 Logger hooks, skipped: []
 [2026-10-09 18:12:51.638] [trace   ] [ 48396] [yap] • [ red4 ] RED4ext.dll image at 0x7FF9AE4C0000..0x7FF9AE5F7000
