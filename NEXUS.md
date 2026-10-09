@@ -51,16 +51,17 @@ Cyberpunk 2077/r6/scripts/Yap/Log.reds[/code]
 To uninstall, delete those two folders.
 
 [size=5][b]For modders[/b][/size]
-[code]module MyMod
+From your own module, import the functions you call, e.g. in [i]Cat[/i]:
+[code]module Cat
 import Yap.Info
 
-public class MySystem extends ScriptableSystem {
-    private func OnAttach() {
-        Info("hello from MyMod");
+public class CatServiceDebug extends ScriptableService {
+    private cb func OnLoad() {
+        Info("calling Yap from Cat");
     }
 }[/code]
 
-Lines land in [font=Courier New]Cyberpunk 2077/red4ext/logs/yap-*.log[/font], for example:
+which lands in [font=Courier New]Cyberpunk 2077/red4ext/logs/yap-*.log[/font] as:
 [code][2026-10-09 18:12:56.460] [info    ] [ 48396] [yap] 🔷 [ reds ] Cat.CatServiceDebug::OnLoad calling Yap from Cat[/code]
 
 Set [font=Courier New]level = "debug"[/font] (or [font=Courier New]"trace"[/font]) in [font=Courier New]red4ext/config.ini[/font] to also see [font=Courier New]Debug[/font] / [font=Courier New]Trace[/font] lines.

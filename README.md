@@ -44,23 +44,50 @@ Each comes with a matching `-PDB.zip` for crash reports.
 
 ## usage
 
+From your own module, import the functions you call, e.g. in `Cat`:
+
 ```swift
-module MyMod
+module Cat
 import Yap.Info
 
-public class MySystem extends ScriptableSystem {
-    private func OnAttach() {
-        Info("hello from MyMod");
+public class CatServiceDebug extends ScriptableService {
+    private cb func OnLoad() {
+        Info("calling Yap from Cat");
     }
 }
 ```
 
-A mod calling `Info` this way (here `Cat`)
-lands in `<game>/red4ext/logs/yap-*.log` as:
+which lands in `<game>/red4ext/logs/yap-*.log` as:
 
 ```text
 [2026-10-09 18:12:56.460] [info    ] [ 48396] [yap] 🔷 [ reds ] Cat.CatServiceDebug::OnLoad calling Yap from Cat
 ```
+
+As an example, [`Debug.reds`](./crates/yap/reds/Debug.reds) calls every function,
+from both a `ScriptableService` and a `ScriptableSystem`:
+
+```swift
+module Yap
+
+class YapService extends ScriptableService {
+    private cb func OnLoad() {
+        Life("Service/OnLoad");
+        let s = "WaWaWaWa";
+        Error(s"Error \(s)");
+        Warn(s"Warn \(s)");
+        Info(s"Info \(s)");
+        Debug(s"Debug \(s)");
+        Trace(s"Trace \(s)");
+    }
+}
+class YapSystem extends ScriptableSystem {
+    func OnAttach() -> Void {
+        Life("System/OnAttach");
+    }
+}
+```
+
+Its lines are shown in [output](#output) below.
 
 Set `level = "debug"` (or `"trace"`) in `red4ext/config.ini`
 to also see `Debug` / `Trace` lines.
@@ -78,6 +105,7 @@ Each kind of line, as `just log yap` prints it (trace run, debug build):
 [2026-10-09 18:12:56.277] [debug   ] [ 48396] [yap] 🌱 [ reds ] Yap.YapService::OnLoad Service/OnLoad
 [2026-10-09 18:12:56.278] [debug   ] [ 48396] [yap] 🔹 [ reds ] Yap.YapService::OnLoad Debug WaWaWaWa
 [2026-10-09 18:12:56.278] [trace   ] [ 48396] [yap] • [ reds ] Yap.YapService::OnLoad Trace WaWaWaWa
+[2026-10-09 18:13:07.475] [debug   ] [ 58868] [yap] 🌱 [ reds ] Yap.YapSystem::OnAttach System/OnAttach
 ```
 
 ### from FTLog (hooks), without caller when called from native code
