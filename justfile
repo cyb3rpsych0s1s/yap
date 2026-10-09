@@ -47,15 +47,12 @@ delete path:
     just copy '{{ join(here, "target", "debug", lowercase(package) + ".pdb") }}' '{{ join(to, red4ext_dir, lowercase(package), lowercase(package) + ".pdb") }}'
 
 @reds package to=game_dir:
-    $rename = '{{ package }}'; if ('{{ package }}' -eq 'Cat') { $rename = 'plugin' }; \
-    just copy-recurse "{{ join(here, "crates", "$rename", "reds", "*") }}" '{{ join(to, redscript_dir, package) }}'
+    just copy-recurse '{{ join(here, "crates", lowercase(package), "reds", "*") }}' '{{ join(to, redscript_dir, package) }}'
 
 @reload package to=game_dir: (reds package to)
 
 @dev package features='default': (setup package) (build package game_dir features) (reload package)
 @dbg package: (setup package) (build-dbg package) (reload package)
-
-@cat: (dev 'Cat')
 
 @uninstall package from=game_dir:
     just delete '{{ join(from, red4ext_dir, lowercase(package)) }}'
@@ -113,6 +110,3 @@ no-debug path:
     cargo fix --allow-dirty
     cargo clippy --fix --allow-dirty
     cargo fmt --all
-
-@start FROM=game_dir:
-    cd "C:\Program Files\SurrealDB"; .\surreal start --log trace rocksdb://"{{ FROM }}"/red4ext/plugins/traffic/traffic.db --allow-all --deny-net --user root --pass root
