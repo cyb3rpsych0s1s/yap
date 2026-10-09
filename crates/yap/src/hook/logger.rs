@@ -1,7 +1,7 @@
 use super::ftlog::FTLOG_HASH;
 use crate::log::{
     self, enabled,
-    ext::{COLOR, RESET},
+    ext::{color, reset},
     red4,
 };
 use libloading::os::windows::Library;
@@ -180,7 +180,9 @@ fn format_w(fmt: *const u16, args: VaList<'_>) -> Option<Vec<u16>> {
 }
 
 fn prefix(origin: Option<&str>) -> String {
-    origin.map_or_else(String::new, |origin| format!("[{COLOR}{origin}{RESET}] "))
+    origin.map_or_else(String::new, |origin| {
+        format!("[{}{origin}{}] ", color(), reset())
+    })
 }
 
 /// `[<origin>] <msg>` (or just `<msg>`), cut at the first NUL if any

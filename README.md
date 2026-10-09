@@ -102,7 +102,7 @@ Each kind of line, as `just log yap` prints it (trace run, debug build):
 [2026-10-09 18:12:51.638] [trace   ] [ 48396] [yap] • [ red4 ] RED4ext.dll image at 0x7FF9AE4C0000..0x7FF9AE5F7000
 ```
 
-Debug builds also color them:
+They are also colored, with ANSI escape codes:
 
 | Part | Color |
 | --- | --- |
@@ -110,6 +110,16 @@ Debug builds also color them:
 | `[ reds ]` | red |
 | `[FTLog]`, `Class::Func` caller | grey |
 | `[<plugin>]` | purple |
+
+To opt out, create `<game>/red4ext/plugins/yap/config.ini` with:
+
+```ini
+[logging]
+colors = false
+```
+
+When that file doesn't set `colors`, the [`NO_COLOR`][no-color]
+environment variable turns them off too.
 
 ## build
 
@@ -140,5 +150,6 @@ if the game isn't in Steam's default folder.
 [redscript]: https://github.com/jac3km4/redscript
 [codeware]: https://github.com/psiberx/cp2077-codeware
 [just]: https://github.com/casey/just
+[no-color]: https://no-color.org
 [jekky]: https://github.com/jac3km4
 [wopss]: https://github.com/WopsS
