@@ -44,8 +44,7 @@ Each comes with a matching `-PDB.zip` for crash reports.
 
 ```swift
 module MyMod
-
-import Yap.*
+import Yap.Info
 
 public class MySystem extends ScriptableSystem {
     private func OnAttach() {
