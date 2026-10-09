@@ -1,5 +1,9 @@
 name: CI
-on: push
+on:
+  push:
+    paths-ignore:
+      - "**/*.md"
+      - "**/.markdownlint.json"
 
 env:
   CARGO_NET_GIT_FETCH_WITH_CLI: true

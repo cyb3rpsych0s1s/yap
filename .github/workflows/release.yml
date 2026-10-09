@@ -8,6 +8,9 @@ on:
       - "rc*"
       - "beta*"
       - "alpha*"
+    paths-ignore:
+      - "**/*.md"
+      - "**/.markdownlint.json"
 
 env:
   CARGO_TERM_COLOR: always
