@@ -61,10 +61,26 @@ delete path:
     just delete '{{ join(from, red4ext_dir, lowercase(package)) }}'
     just delete '{{ join(from, redscript_dir, package) }}'
 
-@ci package folder:
-    just setup '{{ package }}' '{{ join(here, folder) }}'
-    just build '{{ package }}' '{{ join(here, folder) }}'
-    just reload '{{ package }}' '{{ join(here, folder) }}'
+[private]
+no-debug path:
+    @Get-ChildItem -Path '{{ path }}' -Recurse -Filter 'Debug*.reds' | Remove-Item -Force
+
+@ci package folder features='default':
+    just setup '{{ package }}' '{{ join(here, folder, "bin") }}'
+    just create '{{ join(here, folder, "pdb", red4ext_dir, lowercase(package)) }}'
+    just build '{{ package }}' '{{ join(here, folder, "bin") }}' '{{ features }}'
+    just copy '{{ join(here, "target", "release", lowercase(package) + ".pdb") }}' '{{ join(here, folder, "pdb", red4ext_dir, lowercase(package), lowercase(package) + ".pdb") }}'
+    just reload '{{ package }}' '{{ join(here, folder, "bin") }}'
+    just no-debug '{{ join(here, folder, "bin") }}'
+
+@check:
+    cargo check -p yap --release
+    cargo check -p yap --release --no-default-features
+
+@qa:
+    cargo clippy -p yap -- -D warnings
+    cargo clippy -p yap --no-default-features -- -D warnings
+    cargo fmt --all --check
 
 @log package TO=game_dir:
     $folder = '{{ join(TO, "red4ext", "logs") }}'; \
