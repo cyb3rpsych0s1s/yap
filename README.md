@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" alt="yap logo" width="256"></p>
+
 # yap
 
 ![Cyberpunk 2077 version compatibility][patch-badge]
