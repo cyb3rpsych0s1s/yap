@@ -10,9 +10,9 @@ use std::{
 /// `<game>/bin/x64/Cyberpunk2077.exe`: the game folder is 3 levels above the executable
 const EXE_DEPTH: usize = 3;
 /// RED4ext always lives in `<game>/red4ext/`, next to its config
-const RED4EXT_CONFIG: &str = "red4ext/config.ini";
-/// yap's own optional config, never shipped so that updates don't overwrite it
-const YAP_CONFIG: &str = "red4ext/plugins/yap/config.ini";
+const RED4EXT_DIR: &str = "red4ext";
+/// RED4ext's and yap's own (optional, never shipped so that updates don't overwrite it)
+const CONFIG: &str = "config.ini";
 /// https://no-color.org: disables colors when set and not empty, unless yap's config says otherwise
 const NO_COLOR: &str = "NO_COLOR";
 
@@ -48,20 +48,26 @@ pub(crate) fn init() {
         .ok()
         .and_then(|exe| Some(exe.ancestors().nth(EXE_DEPTH)?.to_path_buf()));
     init_colors(game.as_deref());
-    let config = game.map(|game| game.join(RED4EXT_CONFIG));
+    // one component per join, so that the path only uses the platform separator
+    let config = game.map(|game| game.join(RED4EXT_DIR).join(CONFIG));
     match config.as_deref().map(|path| (path, read_level(path))) {
         Some((path, Some(level))) => {
             let _ = MIN_LEVEL.set(level);
-            red4::info!("RED4ext log level: {} ({})", LEVELS[level], path.display());
+            red4::trace!("RED4ext log level: {} ({})", LEVELS[level], path.display());
         }
         Some((path, None)) => red4::warn!("unable to read [logging] level from {}", path.display()),
-        None => red4::warn!("unable to locate RED4ext's {RED4EXT_CONFIG}"),
+        None => red4::warn!("unable to locate RED4ext's {CONFIG}"),
     }
 }
 
 /// `[logging] colors` from yap's own `config.ini` if set, otherwise off when `NO_COLOR` is set
 fn init_colors(game: Option<&Path>) {
-    let config = game.map(|game| game.join(YAP_CONFIG));
+    let config = game.map(|game| {
+        game.join(RED4EXT_DIR)
+            .join("plugins")
+            .join("yap")
+            .join(CONFIG)
+    });
     let from_config = config.as_deref().and_then(|path| {
         let value = read_key(path, "logging", "colors")?;
         match value.as_str() {
