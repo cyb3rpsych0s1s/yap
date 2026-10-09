@@ -30,7 +30,7 @@ Update this table after every successful fix.
 | `crates/yap/reds/Log.reds` | Declares the public script API: `Yap.Life/Trace/Debug/Info/Warn/Error(msg: String)` natives (no `Critical`) | `src/lib.rs` exports |
 | `crates/yap/reds/Debug.reds` | Debug harness: `YapService` / `YapSystem`, `Session/*` callbacks, calls `FTLog("WaWaWaWa")` as a smoke test, reports via `Life` | Codeware, game script API, `Log.reds` |
 | `crates/yap/src/lib.rs` | Plugin entry, and the `Yap.*` log natives. These are registered through a local `script_log!` that mirrors `global!` (`GlobalMetadata::new`), so it can prefix the script caller (`Class::Func`, read from `StackFrame::func()`). They call the **ungated** `log::emit!`, so only RED4ext's `config.ini` level filters them, even in release builds | red4ext-rs |
-| `crates/yap/src/log.rs` | `red4`/`reds`/`ftlog`/`ext` scoped log macros, ANSI colours (debug builds only), and the config.ini level gate: `init()` reads `[logging] level` at the start of `on_load`, and every macro except `error!`/`warn!` checks `enabled(level)` | game layout (`current_exe`), config.ini format |
+| `crates/yap/src/log.rs` | `red4`/`reds`/`ftlog`/`ext` scoped log macros, ANSI colours (on by default; `init()` first reads the opt-outs: `[logging] colors` in yap's own optional `red4ext/plugins/yap/config.ini`, else `NO_COLOR`), and the config.ini level gate: `init()` reads `[logging] level` at the start of `on_load`, and every macro except `error!`/`warn!` checks `enabled(level)` | game layout (`current_exe`), config.ini format |
 
 yap doesn't depend on any particular mod. FTLog lines come from any script that calls the game's `FTLog` (the game's own scripts, or mods such as `cat`). Mirrored lines come from any installed RED4ext plugin, with no per-plugin special case. In-game testing only needs at least one other plugin that logs at runtime.
 
@@ -44,7 +44,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 2. `attached native internal hook for FTLog`
 3. *(trace)* `RED4ext.dll image at 0x…..0x…`
 4. *(trace)* `RED4ext_ResolveAddress(0xCDF52009) = 0x… (addr_hashes::resolve = 0x…, equal: true)`
-5. `RED4ext log level: <Level> (<game>\red4ext\config.ini)`
+5. *(trace)* `RED4ext log level: <Level> (<game>\red4ext\config.ini)`
 6. *(trace)* `Logger table 0x… (Sdk at SdkEnv word #1)` (word #0 is also valid)
 7. `attached 24/24 Logger hooks, skipped: []`
 8. Self-test: `self-test <Entry>` for every entry at or above the configured level, with `F`/`WF` ones reading `…: answer = 42`
@@ -137,10 +137,10 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 - **Check:** `attached n/24, skipped: [...]`. If RED4ext moved logging into another DLL (e.g. a shared spdlog), the range check fails with `unable to locate the Logger table`.
 - **Fix:** widen the range check to the module that actually owns the pointers (`GetModuleHandleExW` with `FROM_ADDRESS`, via libloading/kernel32). For folded entries, give one detour per address and derive the level another way, or accept the skip.
 
-### B5. `config.ini` location and format: `init` / `read_level` / `enabled` in `crates/yap/src/log.rs`
+### B5. `config.ini` location and format: `init` / `read_level` / `read_key` / `enabled` in `crates/yap/src/log.rs`
 - **Assumes:** the config is `<game>/red4ext/config.ini`, located with std only, so any install path works: `std::env::current_exe()` is `<game>/bin/x64/Cyberpunk2077.exe`, the game folder is `EXE_DEPTH` (3) ancestors up, then `RED4EXT_CONFIG`. A layout change shows up as `unable to locate RED4ext's red4ext/config.ini`. It's TOML-like with `[logging]` → `level = "<name>"`, names `trace|debug|info|warn(ing)|err(or)|critical|off`. Current docs: https://docs.red4ext.com/getting-started/configuration
-- **Check:** the `RED4ext log level: …` line. Change `level`, relaunch, and confirm self-test lines below the level vanish.
-- **Fix:** update the parser for a renamed key, section or value. If unreadable, yap must keep working without the early-out (`MIN_LEVEL` unset ⇒ every yap macro and `Logger` detour is enabled, RED4ext still filters downstream). This gate replaces any build-profile gating: yap's own debug/trace lines also show in release builds when `level` allows them.
+- **Check:** the *(trace)* `RED4ext log level: …` line, on a trace run. Change `level`, relaunch, and confirm self-test lines below the level vanish.
+- **Fix:** update the parser for a renamed key, section or value. If unreadable, yap must keep working without the early-out (`MIN_LEVEL` unset ⇒ every yap macro and `Logger` detour is enabled, RED4ext still filters downstream). This gate replaces any build-profile gating: yap's own debug/trace lines also show in release builds when `level` allows them. `read_key` also reads yap's own `[logging] colors`, so a parser change must keep both working. That file belongs to yap, so a RED4ext config change never affects it.
 
 ## C. red4ext-rs bump (`rev` in `crates/yap/Cargo.toml`)
 
@@ -192,10 +192,10 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 ## Verification checklist
 
 1. Both configurations: `cargo clippy -p yap -- -D warnings` and `cargo clippy -p yap --no-default-features -- -D warnings`, then `cargo build -p yap` and `cargo build -p yap --no-default-features`. `cargo tree -p yap -e normal --no-default-features` must not list `libloading`.
-2. `just dbg Yap`, launch the game and load a save. Also do one run with `just dev Yap no-default` (release, no hooks): only `RED4ext log level: …` and the `Yap.*` / `Debug.reds` lines, with no FTLog attach, no `[FTLog]`, no mirrored lines and no self-test.
-3. `just log yap` matches the expected start in **Triage** (lines 1–8, where 3, 4 and 6 only appear on a trace run), shows `WaWaWaWa`, and shows mirrored `[plugin]` lines with the name in purple (`\x1b[35m`).
-4. Set `level = "info"` in `<game>/red4ext/config.ini`, relaunch, and check that `RED4ext log level: Info` appears and no `Debug*` self-test lines do. Then restore the previous value.
-4b. Optional diagnostic run: set `level = "trace"`, relaunch, and check that the *(trace)* lines 3, 4 (`equal: true`) and 6 appear. Then restore the previous value.
+2. `just dbg Yap`, launch the game and load a save. Also do one run with `just dev Yap no-default` (release, no hooks): only the `Yap.*` / `Debug.reds` lines, with no FTLog attach, no `[FTLog]`, no mirrored lines and no self-test.
+3. `just log yap` matches the expected start in **Triage** (lines 1–8, where 3, 4, 5 and 6 only appear on a trace run), shows `WaWaWaWa`, and shows mirrored `[plugin]` lines with the name in purple (`\x1b[35m`) (unless colors are opted out: no `colors = false` in `red4ext/plugins/yap/config.ini`, no `NO_COLOR`).
+4. Set `level = "info"` in `<game>/red4ext/config.ini`, relaunch, and check that no `Debug*` self-test lines appear. Then restore the previous value.
+4b. Optional diagnostic run: set `level = "trace"`, relaunch, and check that the *(trace)* lines 3, 4 (`equal: true`), 5 (`RED4ext log level: Trace`) and 6 appear. Then restore the previous value.
 5. Any other plugin's own log (e.g. `just log cat`) shows its lines unchanged, without a prefix.
 5b. The script API works: the lines from `Debug.reds` (via `Yap.Life`) appear with their caller, like FTLog lines: `🌱 [ reds ] Yap.YapService::OnLoad Service/OnLoad`, `… Yap.YapService::OnSession Session/Start`, `… Yap.YapSystem::OnAttach System/OnAttach`. A test call to `Yap.Info` / `Warn` / `Error` lands at `[info]` / `[warning]` / `[error]`, and in a release build `Yap.Debug` / `Life` still appear when `level = "debug"`.
 6. Quit to desktop and check that `detached 24/24 Logger hooks` and `detached native internal hook for FTLog` appear, with no crash.
