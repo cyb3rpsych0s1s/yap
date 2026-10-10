@@ -2,8 +2,6 @@
 
 # yap
 
-_`Y`et `A`nother `P`lugin for logs... but with a twist!_
-
 ![Cyberpunk 2077 version compatibility][patch-badge]
 [![Nexus][nexus-badge]][nexus]
 [![download][download-badge]][download]
