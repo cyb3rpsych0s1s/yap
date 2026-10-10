@@ -3,6 +3,7 @@
 # yap
 
 ![Cyberpunk 2077 version compatibility][patch-badge]
+[![Nexus][nexus-badge]][nexus]
 [![download][download-badge]][download]
 [![release][release-badge]][actions]
 [![build][build-badge]][actions]
@@ -169,12 +170,14 @@ if the game isn't in Steam's default folder.
 - [@psiberx][psiberx]: author of [codeware][codeware] and other libraries.
 
 [patch-badge]: https://img.shields.io/badge/Cyberpunk_2077-patch_2.31-yellow
-[download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download
+[nexus-badge]: https://img.shields.io/badge/Nexus-Yap-orange
+[download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download&color=blue
 [release-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/release.yml/badge.svg
 [build-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/quality.yml/badge.svg
 [download]: https://github.com/cyb3rpsych0s1s/yap/releases/latest
 [actions]: https://github.com/cyb3rpsych0s1s/yap/actions
 [cyberpunk]: https://www.cyberpunk.net/us/en/
+[nexus]: https://www.nexusmods.com/cyberpunk2077/mods/34906
 [red4ext]: https://github.com/WopsS/RED4ext
 [red4ext-rs]: https://github.com/jac3km4/red4ext-rs
 [redscript]: https://github.com/jac3km4/redscript
