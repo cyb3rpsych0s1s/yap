@@ -7,6 +7,7 @@ mod hook;
 #[allow(dead_code, reason = "crate profile")]
 pub mod config;
 pub mod log;
+mod macros;
 
 /// used by the exported [`log!`] macro, so that callers don't depend on red4ext-rs themselves
 #[doc(hidden)]
@@ -69,7 +70,7 @@ macro_rules! script_log {
             let from = crate::config::caller(Some(frame.func()));
             let msg = unsafe { frame.get_arg::<RedString>() };
             unsafe { frame.step() };
-            crate::log::emit!($level, $icon, reds, "{from}{msg}");
+            crate::__emit!($level, $icon, reds, "{from}{msg}");
         }
         /// only gives RTTI the `String -> Void` signature
         fn signature(_: RedString) {}

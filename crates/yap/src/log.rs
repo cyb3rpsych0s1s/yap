@@ -1,78 +1,4 @@
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __emit {
-    ($level:ident, $icon:literal, ftlog, $($arg:tt)+) => {
-        $crate::__private::red4ext_rs::log::$level!(
-            "[{}FTLog{}] {}",
-            $crate::log::ftlog::color(),
-            $crate::log::ftlog::reset(),
-            format_args!($($arg)+)
-        )
-    };
-    ($level:ident, $icon:literal, $name:ident, $($arg:tt)+) => {
-        $crate::__private::red4ext_rs::log::$level!(
-            "{} {}[{:^6}]{} {}",
-            $icon,
-            $crate::log::$name::color(),
-            stringify!($name),
-            $crate::log::$name::reset(),
-            format_args!($($arg)+)
-        )
-    };
-}
-#[doc(hidden)]
-pub use crate::__emit as emit;
-
-/// Logs through one of yap's scopes (`red4`, `reds`, `ftlog`, `ext`), e.g.
-/// `yap::log!(red4, info, "loaded {}", x)` or `yap::log!(reds, error, hint: "check the path", "unable to read {}", p)`.
-///
-/// Levels: `error` and `warn` (both accept a leading `hint: "..."`), `info`, `pipe`, `life`, `hook`, `debug`, `trace`.
-// gated by RED4ext's log level, which drops these lines anyway: skips formatting them
-#[macro_export]
-macro_rules! log {
-    ($scope:ident, error, hint: $hint:literal, $($arg:tt)+) => {
-        $crate::log::emit!(error, "🔴", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), format_args!($hint))
-    };
-    ($scope:ident, error, $($arg:tt)+) => {
-        $crate::log::emit!(error, "🔴", $scope, $($arg)+)
-    };
-    ($scope:ident, warn, hint: $hint:literal, $($arg:tt)+) => {
-        $crate::log::emit!(warn, "🔶", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), format_args!($hint))
-    };
-    ($scope:ident, warn, $($arg:tt)+) => {
-        $crate::log::emit!(warn, "🔶", $scope, $($arg)+)
-    };
-    ($scope:ident, info, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::INFO) {
-            $crate::log::emit!(info, '🔷', $scope, $($arg)+)
-        }
-    };
-    ($scope:ident, life, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::DEBUG) {
-            $crate::log::emit!(debug, '🌱', $scope, $($arg)+)
-        }
-    };
-    ($scope:ident, pipe, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::INFO) {
-            $crate::log::emit!(info, "", $scope, $($arg)+)
-        }
-    };
-    ($scope:ident, hook, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::DEBUG) {
-            $crate::log::emit!(debug, '🪝', $scope, $($arg)+)
-        }
-    };
-    ($scope:ident, debug, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::DEBUG) {
-            $crate::log::emit!(debug, '🔹', $scope, $($arg)+)
-        }
-    };
-    ($scope:ident, trace, $($arg:tt)+) => {
-        if $crate::config::enabled($crate::config::TRACE) {
-            $crate::log::emit!(trace, '•', $scope, $($arg)+)
-        }
-    };
-}
+use crate::macros::scoped;
 
 // `<scope>::<level>!` shorthands for `log!`, e.g. `yap::log::red4::info!(...)`, usable from other crates.
 // Written out: a macro defined by a macro expansion can't be exported by path,
@@ -177,19 +103,6 @@ macro_rules! __yap_ext_debug { ($($arg:tt)+) => { $crate::log!(ext, debug, $($ar
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __yap_ext_trace { ($($arg:tt)+) => { $crate::log!(ext, trace, $($arg)+) } }
-
-macro_rules! scoped {
-    ($name:ident, $color:literal, $($level:ident = $mac:ident),+ $(,)?) => {
-        // some scopes (e.g. `ext`) are only used by the `hook` feature
-        #[allow(dead_code, unused_imports)]
-        pub mod $name {
-            pub fn color() -> &'static str { if $crate::config::colors() { $color } else { "" } }
-            pub fn reset() -> &'static str { if color().is_empty() { "" } else { "\x1b[0m" } }
-
-            $(pub use $crate::$mac as $level;)+
-        }
-    };
-}
 
 // yellow
 #[rustfmt::skip]
