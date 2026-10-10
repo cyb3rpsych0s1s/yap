@@ -2,36 +2,24 @@
 
 # yap
 
+_`Y`et `A`nother `P`lugin for logs... but with a twist!_
+
 ![Cyberpunk 2077 version compatibility][patch-badge]
 [![Nexus][nexus-badge]][nexus]
 [![download][download-badge]][download]
 [![release][release-badge]][actions]
 [![build][build-badge]][actions]
 
-Logging plugin for [Cyberpunk 2077][cyberpunk] modders,
+Aggregate all the logs from anywhere in one place!
+
+For [Cyberpunk 2077][cyberpunk] modders,
 built on [RED4ext][red4ext].
 
-It gives redscript mods leveled logging straight into RED4ext's log files,
-each line tagged with the script function that emitted it.
+<p align="center">
+    <img src="Screenshot 2026-10-09 000903.png" alt="yap screenshot" width="2048">
+</p>
 
-## features
-
-This plugin comes in 2 flavors.
-
-### a version without any hook with basic features
-
-- [x] `Life`, `Trace`, `Debug`, `Info`, `Warn` and `Error`
-  callable from any script, prefixed with the calling `Class::Func`.
-- [x] follows RED4ext's `[logging] level` from `red4ext/config.ini`,
-  in every build.
-
-### a version with hooks with additional features
-
-- [x] captures the game's own `FTLog` calls.
-- [x] mirrors every other RED4ext plugin's log lines
-  into yap's log as `[<plugin>] …`.
-
-## download
+## getting started
 
 Grab the [latest release][download], then unzip it into your game folder.
 Requires [RED4ext][red4ext] and [redscript][redscript].
@@ -43,7 +31,45 @@ Requires [RED4ext][red4ext] and [redscript][redscript].
 
 Each comes with a matching `-PDB.zip` for crash reports.
 
+## features
+
+This plugin comes in 2 flavors.
+
+### a version without any hook with basic features
+
+- [x] add logging functions: `Trace`, `Debug`, `Info`, `Warn` and `Error`
+  each of the logs gets prefixed with `[<module>.<class>::<func>] …`.
+- [x] supports RED4ext's `[logging] level` from `<game>/red4ext/plugins/yap/config.ini`.
+
+### a version with hooks with additional features
+
+- [x] all the above, plus
+- [x] captures the game's own `FTLog` calls
+  prefixed with `[<module>.<class>::<func>] …`.
+- [x] captures every RED4ext plugin's log lines
+  prefixed with `[<plugin>] …`.
+
+See details below.
+
 ## usage
+
+if you chose the standard version (with hooks)
+
+- pipe the logs to your terminal
+  if you have [just][just] installed, as easily as:
+
+  ```powershell
+  just log Yap
+  ```
+
+  > specify env var `GAME_DIR`
+  > if your game folder is not Steam's default.
+
+  otherwise [manually][log-command].
+
+That's it! Now every possible log will land right in your terminal.
+
+### logging functions
 
 From your own module, import the functions you call, e.g. in `Cat`:
 
@@ -90,7 +116,7 @@ class YapSystem extends ScriptableSystem {
 
 Its lines are shown in [output](#output) below.
 
-Set `level = "debug"` (or `"trace"`) in `red4ext/config.ini`
+Set `level = "debug"` (or `"trace"`) in `<game>/red4ext/config.ini`.
 to also see `Debug` / `Trace` lines.
 
 ## output
@@ -174,6 +200,7 @@ if the game isn't in Steam's default folder.
 [download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download&color=blue
 [release-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/release.yml/badge.svg
 [build-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/quality.yml/badge.svg
+[log-command]: https://github.com/cyb3rpsych0s1s/yap/blob/main/justfile#L82-L102
 [download]: https://github.com/cyb3rpsych0s1s/yap/releases/latest
 [actions]: https://github.com/cyb3rpsych0s1s/yap/actions
 [cyberpunk]: https://www.cyberpunk.net/us/en/
