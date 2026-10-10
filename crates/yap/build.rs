@@ -1,4 +1,3 @@
-#[cfg(all(windows, feature = "plugin"))]
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo::rerun-if-env-changed=OUT_DIR");
@@ -32,6 +31,3 @@ fn main() {
         format_args!("plugin version {} written to: {}", version, out.display())
     );
 }
-
-#[cfg(not(all(windows, feature = "plugin")))]
-fn main(){}
