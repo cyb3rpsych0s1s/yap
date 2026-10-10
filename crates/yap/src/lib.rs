@@ -3,9 +3,16 @@ include!(concat!(env!("OUT_DIR"), "/version.rs"));
 #[cfg(all(windows, feature = "plugin", feature = "hook"))]
 mod hook;
 
+#[doc(hidden)]
 #[allow(dead_code, reason = "crate profile")]
-mod config;
-mod log;
+pub mod config;
+pub mod log;
+
+/// used by the exported [`log!`] macro, so that callers don't depend on red4ext-rs themselves
+#[doc(hidden)]
+pub mod __private {
+    pub use red4ext_rs;
+}
 
 #[cfg(all(windows, feature = "plugin"))]
 pub struct Yap;

@@ -21,14 +21,14 @@ const NO_COLOR: &str = "NO_COLOR";
 /// whether lines get ANSI colors, on until [`init`] reads the opt-outs
 static COLORS: AtomicBool = AtomicBool::new(true);
 
-pub(crate) fn colors() -> bool {
+pub fn colors() -> bool {
     COLORS.load(Ordering::Relaxed)
 }
 
 /// spdlog levels, in RED4ext's `Logger` order
-pub(crate) const TRACE: usize = 0;
-pub(crate) const DEBUG: usize = 1;
-pub(crate) const INFO: usize = 2;
+pub const TRACE: usize = 0;
+pub const DEBUG: usize = 1;
+pub const INFO: usize = 2;
 pub(crate) const WARN: usize = 3;
 pub(crate) const ERROR: usize = 4;
 pub(crate) const CRITICAL: usize = 5;
@@ -40,7 +40,7 @@ const LEVELS: [&str; OFF + 1] = ["Trace", "Debug", "Info", "Warn", "Error", "Cri
 static MIN_LEVEL: OnceLock<usize> = OnceLock::new();
 
 /// whether RED4ext writes lines at `level`, when unknown let RED4ext decide
-pub(crate) fn enabled(level: usize) -> bool {
+pub fn enabled(level: usize) -> bool {
     MIN_LEVEL.get().is_none_or(|&min| level >= min)
 }
 
