@@ -74,32 +74,168 @@ macro_rules! log {
     };
 }
 
-// crate-local shorthands for `log!`, e.g. `red4::info!(...)`
-macro_rules! scoped {
-    // no color given
-    ($d:tt $name:ident) => { scoped!($d $name, ""); };
+// `<scope>::<level>!` shorthands for `log!`, e.g. `yap::log::red4::info!(...)`, usable from other crates.
+// Written out: a macro defined by a macro expansion can't be exported by path,
+// so each one is exported under a hidden name at the crate root, then re-exported by its scope module.
+// (no `#[rustfmt::skip]` wrapper module: rustc would then treat them as macro-expanded)
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_error { ($($arg:tt)+) => { $crate::log!(red4, error, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_warn { ($($arg:tt)+) => { $crate::log!(red4, warn, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_info { ($($arg:tt)+) => { $crate::log!(red4, info, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_life { ($($arg:tt)+) => { $crate::log!(red4, life, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_pipe { ($($arg:tt)+) => { $crate::log!(red4, pipe, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_hook { ($($arg:tt)+) => { $crate::log!(red4, hook, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_debug { ($($arg:tt)+) => { $crate::log!(red4, debug, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_red4_trace { ($($arg:tt)+) => { $crate::log!(red4, trace, $($arg)+) } }
 
-    ($d:tt $name:ident, $color:literal) => {
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_error { ($($arg:tt)+) => { $crate::log!(reds, error, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_warn { ($($arg:tt)+) => { $crate::log!(reds, warn, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_info { ($($arg:tt)+) => { $crate::log!(reds, info, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_life { ($($arg:tt)+) => { $crate::log!(reds, life, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_pipe { ($($arg:tt)+) => { $crate::log!(reds, pipe, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_hook { ($($arg:tt)+) => { $crate::log!(reds, hook, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_debug { ($($arg:tt)+) => { $crate::log!(reds, debug, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_reds_trace { ($($arg:tt)+) => { $crate::log!(reds, trace, $($arg)+) } }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_error { ($($arg:tt)+) => { $crate::log!(ftlog, error, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_warn { ($($arg:tt)+) => { $crate::log!(ftlog, warn, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_info { ($($arg:tt)+) => { $crate::log!(ftlog, info, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_life { ($($arg:tt)+) => { $crate::log!(ftlog, life, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_pipe { ($($arg:tt)+) => { $crate::log!(ftlog, pipe, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_hook { ($($arg:tt)+) => { $crate::log!(ftlog, hook, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_debug { ($($arg:tt)+) => { $crate::log!(ftlog, debug, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ftlog_trace { ($($arg:tt)+) => { $crate::log!(ftlog, trace, $($arg)+) } }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_error { ($($arg:tt)+) => { $crate::log!(ext, error, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_warn { ($($arg:tt)+) => { $crate::log!(ext, warn, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_info { ($($arg:tt)+) => { $crate::log!(ext, info, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_life { ($($arg:tt)+) => { $crate::log!(ext, life, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_pipe { ($($arg:tt)+) => { $crate::log!(ext, pipe, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_hook { ($($arg:tt)+) => { $crate::log!(ext, hook, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_debug { ($($arg:tt)+) => { $crate::log!(ext, debug, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_ext_trace { ($($arg:tt)+) => { $crate::log!(ext, trace, $($arg)+) } }
+
+macro_rules! scoped {
+    ($name:ident, $color:literal, $($level:ident = $mac:ident),+ $(,)?) => {
         // some scopes (e.g. `ext`) are only used by the `hook` feature
-        #[allow(dead_code, unused_imports, unused_macros)]
+        #[allow(dead_code, unused_imports)]
         pub mod $name {
             pub fn color() -> &'static str { if $crate::config::colors() { $color } else { "" } }
             pub fn reset() -> &'static str { if color().is_empty() { "" } else { "\x1b[0m" } }
 
-            macro_rules! error { ($d($d arg:tt)+) => { $crate::log!($name, error, $d($d arg)+) } }
-            macro_rules! warn_ { ($d($d arg:tt)+) => { $crate::log!($name, warn, $d($d arg)+) } }
-            macro_rules! info { ($d($d arg:tt)+) => { $crate::log!($name, info, $d($d arg)+) } }
-            macro_rules! life { ($d($d arg:tt)+) => { $crate::log!($name, life, $d($d arg)+) } }
-            macro_rules! pipe { ($d($d arg:tt)+) => { $crate::log!($name, pipe, $d($d arg)+) } }
-            macro_rules! hook { ($d($d arg:tt)+) => { $crate::log!($name, hook, $d($d arg)+) } }
-            macro_rules! debug { ($d($d arg:tt)+) => { $crate::log!($name, debug, $d($d arg)+) } }
-            macro_rules! trace { ($d($d arg:tt)+) => { $crate::log!($name, trace, $d($d arg)+) } }
-            pub(crate) use {debug, error, hook, life, info, pipe, trace, warn_ as warn};
+            $(pub use $crate::$mac as $level;)+
         }
     };
 }
 
-scoped!($ red4, "\x1b[33m"); // yellow
-scoped!($ reds, "\x1b[31m"); // red
-scoped!($ ftlog, "\x1b[90m"); // grey
-scoped!($ ext, "\x1b[35m"); // purple
+// yellow
+#[rustfmt::skip]
+scoped!(red4, "\x1b[33m",
+    error = __yap_red4_error,
+    warn = __yap_red4_warn,
+    info = __yap_red4_info,
+    life = __yap_red4_life,
+    pipe = __yap_red4_pipe,
+    hook = __yap_red4_hook,
+    debug = __yap_red4_debug,
+    trace = __yap_red4_trace,
+);
+// red
+#[rustfmt::skip]
+scoped!(reds, "\x1b[31m",
+    error = __yap_reds_error,
+    warn = __yap_reds_warn,
+    info = __yap_reds_info,
+    life = __yap_reds_life,
+    pipe = __yap_reds_pipe,
+    hook = __yap_reds_hook,
+    debug = __yap_reds_debug,
+    trace = __yap_reds_trace,
+);
+// grey
+#[rustfmt::skip]
+scoped!(ftlog, "\x1b[90m",
+    error = __yap_ftlog_error,
+    warn = __yap_ftlog_warn,
+    info = __yap_ftlog_info,
+    life = __yap_ftlog_life,
+    pipe = __yap_ftlog_pipe,
+    hook = __yap_ftlog_hook,
+    debug = __yap_ftlog_debug,
+    trace = __yap_ftlog_trace,
+);
+// purple
+#[rustfmt::skip]
+scoped!(ext, "\x1b[35m",
+    error = __yap_ext_error,
+    warn = __yap_ext_warn,
+    info = __yap_ext_info,
+    life = __yap_ext_life,
+    pipe = __yap_ext_pipe,
+    hook = __yap_ext_hook,
+    debug = __yap_ext_debug,
+    trace = __yap_ext_trace,
+);
