@@ -11,10 +11,11 @@ Paste the block below into the description editor in BBCode mode (the `[/]` togg
 
 [size=5][b]What is it?[/b][/size]
 
-[b]yap[/b] is a small [url=https://www.nexusmods.com/cyberpunk2077/mods/2380]RED4ext[/url] plugin for modders
-which can aggregate human-readable color-coded logs from [i]anywhere[/i] in a single unified file!
+[b]yap[/b] is a small [url=https://www.nexusmods.com/cyberpunk2077/mods/2380]RED4ext[/url] logging plugin utility for modders
+which can aggregate human-readable, color-coded logs from [i]anywhere[/i] in a single unified file!
 
-[b]Players[/b]: you should not need yap, unless a mod explicitly states it as requirement.
+[b]Players[/b]: you should not need yap, unless a mod explicitly states it as requirement
+but this is not what it was designed for, so it's unlikely.
 
 [size=5][b]Features[/b][/size]
 
@@ -33,14 +34,16 @@ It comes in 2 flavors. Choose one.
 [*]captures every RED4ext [color=#f1c232][font=Roboto]Logger[/font][/color] calls.[/*]
 [/list]
 
-The hooked flavor relies on game and RED4ext internals.
-It is expected to break after a game patch,
+The fully-featured version relies on game and RED4ext internals.
+It is [color=#ea9999]expected[/color] to break after a game patch,
 but you can temporarily switch to [color=#f1c232][font=Roboto]NO_HOOK[/font][/color] version until yap is updated:
 your mods' log calls keep working.
 
 Given it aggregates all logs in one log file which can quickly bloats,
 you might want to consider increasing [b]max_file_size[/b] in [color=#f1c232][font=Roboto]red4ext\config.ini[/font][/color]
 or simply uninstall it whenever you don't need it.
+
+Each main file comes with an optional [b]PDB[/b] file, only useful to analyze crash reports. 
 
 [size=5][b]Installation[/b][/size]
 Install with Vortex or MO2, or extract the archive into your game folder. You should end up with:
@@ -70,14 +73,12 @@ Lines are colored with ANSI escape codes, which look like [color=#f1c232][font=R
 colors = false[/code]
 or set the [url=https://no-color.org]NO_COLOR[/url] environment variable.
 
-What each kind of line looks like (hooked flavor):
+What each kind of line looks like (version with hooks):
 [code][2026-10-09 18:12:56.277] [error   ] [ 48396] [yap] 🔴 [ reds ] Yap.YapService::OnLoad Error WaWaWaWa
 [2026-10-09 18:12:56.277] [warning ] [ 48396] [yap] 🔶 [ reds ] Yap.YapService::OnLoad Warn WaWaWaWa
 [2026-10-09 18:12:56.278] [debug   ] [ 48396] [yap] 🔹 [ reds ] Yap.YapService::OnLoad Debug WaWaWaWa
 [2026-10-09 18:12:56.278] [info    ] [ 48396] [yap] [FTLog] Yap.YapService::OnLoad FTLog WaWaWaWa
 [2026-10-09 18:12:51.888] [info    ] [ 48396] [yap] [octopak] on RTTI post register[/code]
-
-Each main file comes with an optional [b]PDB[/b] file, only useful to analyze crash reports.
 
 [size=5][b]Source code[/b][/size]
 Open source on [url=https://github.com/cyb3rpsych0s1s/yap]GitHub[/url], where releases are built by CI.
@@ -93,6 +94,6 @@ Usage of AI in contributions is welcomed if properly harnessed, and review comme
 [*][url=https://www.nexusmods.com/profile/Demon9ne]Demon9ne[/url]: for suggesting it in the first place 💡.[/*]
 [*][url=https://github.com/WopsS]WopsS[/url]: the author of [url=https://github.com/WopsS/RED4ext]RED4ext[/url].[/*]
 [*][url=https://github.com/jac3km4]jekky[/url]: the author of [url=https://github.com/jac3km4/red4ext-rs]red4ext-rs[/url] and [url=https://github.com/jac3km4/redscript]Redscript[/url].[/*]
-[*][url=https://github.com/psiberx]psiberx[/url]: the author of [url=https://github.com/psiberx/cp2077-codeware]Codeware[/url].[/*]
+[*][url=https://github.com/psiberx]psiberx[/url]: the author of [url=https://github.com/psiberx/cp2077-codeware]Codeware[/url], and many other libraries.[/*]
 [/list]
 ```
