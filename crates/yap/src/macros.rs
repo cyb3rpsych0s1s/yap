@@ -24,18 +24,26 @@ macro_rules! __emit {
 /// Logs through one of yap's scopes (`red4`, `reds`, `ftlog`, `ext`), e.g.
 /// `yap::log!(red4, info, "loaded {}", x)` or `yap::log!(reds, error, hint: "check the path", "unable to read {}", p)`.
 ///
-/// Levels: `error` and `warn` (both accept a leading `hint: "..."`), `info`, `pipe`, `life`, `hook`, `debug`, `trace`.
+/// Levels: `error` and `warn` (both accept a leading `hint: "..."` or `hint: CONST`), `info`, `pipe`, `life`, `hook`, `debug`, `trace`.
 // gated by RED4ext's log level, which drops these lines anyway: skips formatting them
 #[macro_export]
 macro_rules! log {
+    // a literal hint goes through `format_args!` for inline captures (`hint: "check {path}"`),
+    // so it must come before the `expr` arm, which a literal matches too
     ($scope:ident, error, hint: $hint:literal, $($arg:tt)+) => {
         $crate::__emit!(error, "🔴", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), format_args!($hint))
+    };
+    ($scope:ident, error, hint: $hint:expr, $($arg:tt)+) => {
+        $crate::__emit!(error, "🔴", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), $hint)
     };
     ($scope:ident, error, $($arg:tt)+) => {
         $crate::__emit!(error, "🔴", $scope, $($arg)+)
     };
     ($scope:ident, warn, hint: $hint:literal, $($arg:tt)+) => {
         $crate::__emit!(warn, "🔶", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), format_args!($hint))
+    };
+    ($scope:ident, warn, hint: $hint:expr, $($arg:tt)+) => {
+        $crate::__emit!(warn, "🔶", $scope, "{}\n   💡 hint: {}", format_args!($($arg)+), $hint)
     };
     ($scope:ident, warn, $($arg:tt)+) => {
         $crate::__emit!(warn, "🔶", $scope, $($arg)+)
