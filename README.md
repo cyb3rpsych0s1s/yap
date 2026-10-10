@@ -162,9 +162,11 @@ if the game isn't in Steam's default folder.
 
 ## credits
 
+- [@demon9ne][Demon9ne]: for coming up with the idea, ages ago.
+- [@WopsS][wopss]: author of [RED4ext][red4ext].
 - [@jekky][jekky]: author of [red4ext-rs][red4ext-rs]
   and [redscript][redscript].
-- [@WopsS][wopss]: author of [RED4ext][red4ext].
+- [@psiberx][psiberx]: author of [codeware][codeware] and other libraries.
 
 [patch-badge]: https://img.shields.io/badge/Cyberpunk_2077-patch_2.31-yellow
 [download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download
@@ -179,5 +181,7 @@ if the game isn't in Steam's default folder.
 [codeware]: https://github.com/psiberx/cp2077-codeware
 [just]: https://github.com/casey/just
 [no-color]: https://no-color.org
-[jekky]: https://github.com/jac3km4
+[demon9ne]: https://www.nexusmods.com/profile/Demon9ne?gameId=3333
 [wopss]: https://github.com/WopsS
+[jekky]: https://github.com/jac3km4
+[psiberx]: https://github.com/psiberx
