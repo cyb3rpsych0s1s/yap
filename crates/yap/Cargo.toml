@@ -5,17 +5,18 @@ edition.workspace = true
 rust-version.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 name = "yap"
 
 [features]
-default = ["hook"]
+default = ["plugin", "hook"]
 # detours of FTLog and RED4ext's Logger: the only part of yap built around raw pointers,
 # opt out with `--no-default-features`
 hook = ["dep:libloading"]
+plugin = []
 
 [dependencies]
-libloading = { version = "0.8", optional = true }
+libloading = { version = "0.9", optional = true }
 red4ext-rs = { git = "https://github.com/jac3km4/red4ext-rs", rev = "0f77591b67aec31893257ff753fa7466c388830a", features = ["log"] }
 
 [build-dependencies]
