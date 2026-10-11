@@ -10,6 +10,12 @@ class YapService extends ScriptableService {
         Debug(s"Debug \(s)");
         Trace(s"Trace \(s)");
         FTLog(s"FTLog \(s)");
+        LogChannel(n"DEBUG", s"LogChannel \(s)");
+        LogChannelWarning(n"DEBUG", s"LogChannelWarning \(s)");
+        LogChannelError(n"DEBUG", s"LogChannelError \(s)");
+        // Codeware's, which call LogChannel natively
+        Print(s"Print \(s)");
+        ModLog(n"Yap", s"ModLog \(s)");
         let system = GameInstance.GetCallbackSystem();
         system.RegisterCallback(n"Session/BeforeStart", this, n"OnSession");
         system.RegisterCallback(n"Session/Start", this, n"OnSession");

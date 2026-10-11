@@ -8,7 +8,7 @@ use red4ext_rs::{
 };
 use std::sync::OnceLock;
 
-type Native =
+pub(super) type Native =
     unsafe extern "C" fn(i: *mut IScriptable, f: *mut StackFrame, a3: VoidPtr, a4: VoidPtr);
 
 /// address hash of the native `FTLog` in RED4ext's address database
@@ -17,11 +17,11 @@ const NAME: &str = "FTLog";
 
 /// opcode wrapping every `script_ref<T>` argument, followed by a `CBaseRTTIType*` (T) then the expression,
 /// e.g. `66 <String type ptr> 18 <local>` or `66 <String type ptr> 24 <InvokeStatic>` (2.31)
-const REF_OPCODE: u8 = 0x66;
-const REF_INSTR_SIZE: usize = OPCODE_SIZE as usize + size_of::<usize>();
+pub(super) const REF_OPCODE: u8 = 0x66;
+pub(super) const REF_INSTR_SIZE: usize = OPCODE_SIZE as usize + size_of::<usize>();
 
 /// cached, since [`RttiSystem::get`] takes the RTTI write lock
-fn string_type() -> usize {
+pub(super) fn string_type() -> usize {
     static STRING: OnceLock<usize> = OnceLock::new();
     *STRING.get_or_init(|| {
         RttiSystem::get()
@@ -32,16 +32,33 @@ fn string_type() -> usize {
 
 /// `CStackFrame::code`, its first field, kept private by red4ext-rs:
 /// the next instruction, i.e. the first argument when a native starts
-unsafe fn code(frame: *const StackFrame) -> *const u8 {
+pub(super) unsafe fn code(frame: *const StackFrame) -> *const u8 {
     unsafe { *frame.cast::<*const u8>() }
 }
 
+/// whether the next argument is a `script_ref<String>`, i.e. `REF_OPCODE` then the `String` type
+pub(super) unsafe fn is_string_ref(frame: *const StackFrame) -> bool {
+    unsafe {
+        let code = code(frame);
+        *code == REF_OPCODE
+            && code
+                .add(OPCODE_SIZE as usize)
+                .cast::<usize>()
+                .read_unaligned()
+                == string_type()
+    }
+}
+
+/// `None` when empty, invalid UTF-8 or with control characters: such lines are dropped
+pub(super) fn message(msg: &RedString) -> Option<&str> {
+    msg.to_str()
+        .ok()
+        .filter(|msg| !msg.is_empty() && !msg.bytes().any(|b| b.is_ascii_control() && b != b'\t'))
+}
+
 fn log(caller: Option<&Function>, msg: &RedString) {
-    let msg = match msg.to_str() {
-        Ok(msg) if !msg.is_empty() && !msg.bytes().any(|b| b.is_ascii_control() && b != b'\t') => {
-            msg
-        }
-        _ => return, // empty, invalid UTF-8 or control characters: drop it
+    let Some(msg) = message(msg) else {
+        return;
     };
     ftlog::pipe!("{}{msg}", crate::config::caller(caller));
 }
@@ -62,23 +79,19 @@ unsafe extern "C" fn detour(
 
         if frame.has_code() && !other_native {
             let state = frame.args_state();
-            let code = code(f);
-            let is_string_ref = *code == REF_OPCODE
-                && code
-                    .add(OPCODE_SIZE as usize)
-                    .cast::<usize>()
-                    .read_unaligned()
-                    == string_type();
 
-            if is_string_ref {
+            if is_string_ref(f) {
                 // script caller, as a pointer so that its borrow of the frame ends before stepping
-                let caller = std::ptr::from_ref(frame.func());
+                let caller = crate::config::func(frame).map(std::ptr::from_ref);
                 // evaluate the expression by value, rather than referencing a temporary
                 // which the engine destroys as soon as the argument has been read
                 for _ in 0..REF_INSTR_SIZE {
                     frame.step();
                 }
-                log(caller.as_ref(), &StackFrame::get_arg::<RedString>(frame));
+                log(
+                    caller.and_then(|c| c.as_ref()),
+                    &StackFrame::get_arg::<RedString>(frame),
+                );
             } else if callee.is_none() {
                 // not called from scripts (e.g. from another native plugin)
                 if let Some(msg) = StackFrame::get_arg::<ScriptRef<RedString>>(frame).value() {

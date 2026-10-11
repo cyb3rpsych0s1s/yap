@@ -67,7 +67,7 @@ macro_rules! script_log {
 
         extern "C" fn native_impl(_: &IScriptable, frame: &mut StackFrame, _: VoidPtr, _: i64) {
             // natives run on their caller's frame: read it before consuming the argument
-            let from = crate::config::caller(Some(frame.func()));
+            let from = crate::config::caller(crate::config::func(frame));
             let msg = unsafe { frame.get_arg::<RedString>() };
             unsafe { frame.step() };
             crate::__emit!($level, $icon, reds, "{from}{msg}");

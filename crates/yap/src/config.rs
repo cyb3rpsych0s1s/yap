@@ -1,4 +1,4 @@
-use red4ext_rs::types::Function;
+use red4ext_rs::types::{Function, StackFrame};
 use std::{
     path::Path,
     sync::{
@@ -124,6 +124,19 @@ fn read_key(path: &Path, section: &str, key: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// `CStackFrame::func`, null when a native is called from native code (`Function::Execute`),
+/// which red4ext-rs's `StackFrame::func` would turn into a dangling reference
+pub(crate) fn func(frame: &StackFrame) -> Option<&Function> {
+    // second field, after `code`
+    unsafe {
+        std::ptr::from_ref(frame)
+            .cast::<*const Function>()
+            .add(1)
+            .read()
+            .as_ref()
+    }
 }
 
 /// `Class::func ` (or `func `) of the calling script function, empty when unknown or native

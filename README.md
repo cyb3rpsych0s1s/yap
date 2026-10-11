@@ -44,6 +44,8 @@ This plugin comes in 2 flavors.
 - [x] all the above, plus
 - [x] captures the game's own `FTLog` calls
   prefixed with `[<module>.<class>::<func>] …`.
+- [x] captures the game's own `LogChannel`, `LogChannelWarning` and `LogChannelError` calls
+  (e.g. Codeware's `Red::Log::Debug`), prefixed with `[LogChannel:<channel>] [<module>.<class>::<func>] …`.
 - [x] captures every RED4ext plugin's log lines
   prefixed with `[<plugin>] …`.
 
@@ -140,6 +142,17 @@ Each kind of line, as `just log yap` prints it (trace run, debug build):
 [2026-10-09 18:13:07.352] [info    ] [ 84940] [yap] [FTLog] Audioware initialized successfully!
 ```
 
+### from LogChannel (hooks), without caller when called from native code
+
+At the matching level: `LogChannel` as info, `LogChannelWarning` as warning (🔶), `LogChannelError` as error (🔴).
+
+```text
+[yap] [LogChannel:DEBUG] Yap.YapService::OnLoad LogChannel WaWaWaWa
+[yap] 🔶 [LogChannel:DEBUG] Yap.YapService::OnLoad LogChannelWarning WaWaWaWa
+[yap] 🔴 [LogChannel:DEBUG] Yap.YapService::OnLoad LogChannelError WaWaWaWa
+[yap] [LogChannel:Yap] ModLog WaWaWaWa
+```
+
 ### from other native plugins (hooks)
 
 ```text
@@ -161,7 +174,8 @@ They are also colored, with ANSI escape codes:
 | --- | --- |
 | `[ red4 ]` | yellow |
 | `[ reds ]` | red |
-| `[FTLog]`, `Class::Func` caller | grey |
+| `[FTLog]`, `LogChannel`, `Class::Func` caller | grey |
+| `<channel>` (in `[LogChannel:<channel>]`) | cyan |
 | `[<plugin>]` | purple |
 
 To opt out, create `<game>/red4ext/plugins/yap/config.ini` with:
