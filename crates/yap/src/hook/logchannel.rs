@@ -1,4 +1,5 @@
 use super::ftlog::{Native, REF_INSTR_SIZE, is_string_ref, message};
+use crate::config;
 use crate::log::{chan, red4};
 use red4ext_rs::{
     NativeRepr, RttiSystem, SdkEnv, VoidPtr, addr_hashes,
@@ -96,11 +97,16 @@ unsafe fn capture(f: *mut StackFrame, natives: &[Channel]) {
         // script caller, as a pointer so that its borrow of the frame ends before stepping
         let (native, caller) = match callee {
             Some(callee) => match named(callee) {
-                Some(native) => (native, Some(std::ptr::from_ref(frame.func()))),
+                Some(native) => (native, config::func(frame).map(std::ptr::from_ref)),
                 None => return, // another native sharing the address
             },
-            // not called from scripts (e.g. from another native plugin, like Codeware's `Red::Log`)
-            None => (named(frame.func()).unwrap_or(&natives[0]), None),
+            // not called from scripts (e.g. from another native plugin, like Codeware's `Red::Log`):
+            // `Function::Execute` leaves the frame's function null, so `LogChannel` and `LogChannelError`
+            // can't be told apart there, Codeware only calls `LogChannel`
+            None => (
+                config::func(frame).and_then(named).unwrap_or(&natives[0]),
+                None,
+            ),
         };
 
         let state = frame.args_state();

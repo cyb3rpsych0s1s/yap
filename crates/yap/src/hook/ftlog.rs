@@ -82,13 +82,16 @@ unsafe extern "C" fn detour(
 
             if is_string_ref(f) {
                 // script caller, as a pointer so that its borrow of the frame ends before stepping
-                let caller = std::ptr::from_ref(frame.func());
+                let caller = crate::config::func(frame).map(std::ptr::from_ref);
                 // evaluate the expression by value, rather than referencing a temporary
                 // which the engine destroys as soon as the argument has been read
                 for _ in 0..REF_INSTR_SIZE {
                     frame.step();
                 }
-                log(caller.as_ref(), &StackFrame::get_arg::<RedString>(frame));
+                log(
+                    caller.and_then(|c| c.as_ref()),
+                    &StackFrame::get_arg::<RedString>(frame),
+                );
             } else if callee.is_none() {
                 // not called from scripts (e.g. from another native plugin)
                 if let Some(msg) = StackFrame::get_arg::<ScriptRef<RedString>>(frame).value() {
