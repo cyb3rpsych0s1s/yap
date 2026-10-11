@@ -1,6 +1,6 @@
 use super::ftlog::{Native, REF_INSTR_SIZE, is_string_ref, message};
 use crate::config;
-use crate::log::{chan, red4};
+use crate::log::{chan, ftlog, red4};
 use red4ext_rs::{
     SdkEnv, VoidPtr, addr_hashes,
     types::{
@@ -45,19 +45,21 @@ const WARNING: &[Channel] = &[LOG_CHANNEL_WARNING];
 const SHARED_HASHES: &[u32] = &[0xB7C91CD0, 0x63201EDA]; // 0x140D279D8 (2.31)
 const WARNING_HASHES: &[u32] = &[0xA9621FA6]; // 0x14205573C (2.31)
 
-/// `[<native>:<channel>] Class::Func msg`
+/// the same tag for all three natives, which the level already tells apart
+const TAG: &str = "LogChannel";
+
+/// `[LogChannel:<channel>] Class::Func msg`
 fn log(native: &Channel, channel: CName, caller: Option<&Function>, msg: &RedString) {
     let channel = channel.as_str();
     let Some(msg) = message(msg) else {
         return red4::trace!("{}:{channel}: dropped empty or invalid text", native.name);
     };
-    let (color, reset) = (chan::color(), chan::reset());
-    let name = native.name;
+    let (grey, cyan, reset) = (ftlog::color(), chan::color(), chan::reset());
     let caller = crate::config::caller(caller);
     match native.level {
-        Level::Info => chan::pipe!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
-        Level::Warn => chan::warn!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
-        Level::Error => chan::error!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
+        Level::Info => chan::pipe!("[{grey}{TAG}{reset}:{cyan}{channel}{reset}] {caller}{msg}"),
+        Level::Warn => chan::warn!("[{grey}{TAG}{reset}:{cyan}{channel}{reset}] {caller}{msg}"),
+        Level::Error => chan::error!("[{grey}{TAG}{reset}:{cyan}{channel}{reset}] {caller}{msg}"),
     }
 }
 
