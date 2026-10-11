@@ -31,6 +31,7 @@ It comes in 2 flavors. Choose one.
 [list]
 [*]same as above, plus[/*]
 [*]captures the game's own [color=#f1c232][font=Roboto]FTLog[/font][/color] calls.[/*]
+[*]captures the game's own [color=#f1c232][font=Roboto]LogChannel[/font][/color], [color=#f1c232][font=Roboto]LogChannelWarning[/font][/color] and [color=#f1c232][font=Roboto]LogChannelError[/font][/color] calls.[/*]
 [*]captures every RED4ext [color=#f1c232][font=Roboto]Logger[/font][/color] calls.[/*]
 [/list]
 
