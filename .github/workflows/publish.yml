@@ -24,6 +24,14 @@ on:
 permissions:
   contents: read
 
+# Nexus "file" IDs (Files tab > Advanced, or Manage Files > edit), not secret.
+# Each file must already exist with one upload: the action only adds versions to it.
+env:
+  NEXUS_FILE_ID_HOOK: "8117220"      # the "Yap" file
+  NEXUS_FILE_ID_NO_HOOK: "8117226"   # the "Yap (NO_HOOK)" file
+  # `uses:` takes no expressions, hence the YAML anchor (must be the full owner/repo@sha)
+  NEXUS_ACTION_VERSION: &nexus-action Nexus-Mods/upload-action@c96019556046053aa26044b44396cd38929daf23   # v1.0.0-beta.10
+
 # single global lane: two tags must never race on the same Nexus files / mod version
 concurrency:
   group: nexus-publish
@@ -42,15 +50,8 @@ jobs:
       VARIANTS: ${{ inputs.variants }}
       ALLOW_PRE: ${{ inputs.allow_prerelease }}
     steps:
-      # belt and braces only: the real gate is the `nexusmods` environment protection rules
-      - name: Check actor and ref
-        env:
-          ACTOR: ${{ github.triggering_actor }}
-          REF: ${{ github.ref }}
-        run: |
-          [[ "$ACTOR" == Roms1383 ]] || { echo "::error::$ACTOR is not allowed to publish"; exit 1; }
-          [[ "$REF" == refs/heads/main ]] || { echo "::error::Dispatch from main, not $REF"; exit 1; }
-
+      # who may publish, and from which ref, is enforced by the `nexusmods` environment
+      # (required reviewers + main-only deployments), not here: this file is editable by any writer
       - id: check
         run: |
           set -euo pipefail
@@ -104,7 +105,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     # dry runs need neither approval nor the API key
-    environment: ${{ !inputs.dry_run && 'nexusmods' || '' }}   # holds secrets.NEXUSMODS_API_KEY
+    environment: ${{ !inputs.dry_run && 'nexusmods' || '' }}   # holds secrets.NEXUS_API_KEY
     permissions:
       contents: write                 # only for the nexus/<tag>-<variant> marker
     strategy:
@@ -121,14 +122,12 @@ jobs:
         id: asset
         env:
           GH_TOKEN: ${{ github.token }}
-          ID_HOOK: ${{ vars.NEXUS_FILE_ID_HOOK }}
-          ID_NO_HOOK: ${{ vars.NEXUS_FILE_ID_NO_HOOK }}
           DIGESTS: ${{ needs.validate.outputs.digests }}
         run: |
           set -euo pipefail
           case "$VARIANT" in
-            hook)    suffix="";         file_id="$ID_HOOK";    label="Yap" ;;
-            no-hook) suffix="-NO_HOOK"; file_id="$ID_NO_HOOK"; label="Yap (NO_HOOK)" ;;
+            hook)    suffix="";         file_id="$NEXUS_FILE_ID_HOOK";    label="Yap" ;;
+            no-hook) suffix="-NO_HOOK"; file_id="$NEXUS_FILE_ID_NO_HOOK"; label="Yap (NO_HOOK)" ;;
           esac
           [[ -n "$file_id" ]] || { echo "::error::No Nexus file ID set for $VARIANT"; exit 1; }
           asset="Yap-windows-${TAG}${suffix}.zip"
@@ -155,14 +154,14 @@ jobs:
 
       - name: Upload to Nexus Mods
         if: ${{ !inputs.dry_run }}
-        uses: Nexus-Mods/upload-action@c96019556046053aa26044b44396cd38929daf23   # v1.0.0-beta.10
+        uses: *nexus-action   # see NEXUS_ACTION_VERSION
         with:
-          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          api_key: ${{ secrets.NEXUS_API_KEY }}
           file_id: ${{ steps.asset.outputs.file_id }}
           filename: ${{ steps.asset.outputs.file }}
           version: ${{ needs.validate.outputs.version }}
           display_name: ${{ steps.asset.outputs.label }}
-          archive_existing_version: true
+          archive_existing_version: false
           update_mod_version: true
 
       - name: Explain how to release the claim
