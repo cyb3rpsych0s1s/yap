@@ -61,6 +61,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 | Game crashes at startup right after `Plugin/OnLoad` | A1 (resolve of a missing hash), then A2 |
 | (trace run) Line 4 shows `equal: false` or a value of `0` | A1 |
 | `WaWaWaWa` / `Class::Func` FTLog lines missing, garbled or crashing in-game | A2, A3, A4 |
+| Crash in `yap.dll` reading `0x10` right after the `LogChannel*` lines (Codeware's `Print` / `ModLog`), or when a native plugin calls `Yap.*` | a `frame.func()` on a frame from `Function::Execute`, whose function is null: always go through `config::func` (C2) |
 | Crash at startup in `Cyberpunk2077.exe+0x1fe0fe` (read at `0x14`, null `CString`) right after a `[DEBUG] … LogChannel` line | `crates/yap/reds/DebugNatives.reds` declares `text` with the wrong type: it must be `script_ref<String>`, since the natives read it as a ref (A6) |
 | `[DEBUG] … LogChannel* WaWaWaWa` lines (or Codeware's `Print` / `ModLog` ones, without caller) missing, at the wrong level, garbled or crashing, or `unable to resolve LogChannel…` | A6 |
 | `unable to open RED4ext.dll` / `unable to open yap.dll` | B1 |
@@ -114,6 +115,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
   - The address hashes in `SHARED_HASHES` / `WARNING_HASHES` still resolve. `LogChannel` and `LogChannelError` share one native (identical code folding), so they get **one** hook (MinHook can't hook an address twice). The detour tells them apart by the `InvokeStatic` callee's `short_name`, and skips any other native that shares the stub. If a patch splits them, add a third hook.
   - The script declarations are `LogChannel*(channel: CName, text: script_ref<String>)`. From scripts, the `text` expression may come wrapped in `REF_OPCODE` (if it's declared `script_ref<String>`): the detour unwraps it when present. For native callers (`Execute(CStack)`, e.g. Codeware's `Red::Log::Channel`, which passes a `script_ref:String`), `text_is_ref()` reads the RTTI type of the second param of `LogChannel`, and only reads `String` or `script_ref:String`. Anything else is skipped rather than reading a wrong-sized value.
   - For native callers the level comes from `frame.func()`'s name, and falls back to `LogChannel` (info) when it's unknown.
+  - Native callers (`Function::Execute`, e.g. Codeware's `Print` / `ModLog`) run on a frame whose `func` is **null**. red4ext-rs's `StackFrame::func()` doesn't check for that, so every read goes through `config::func` (word 1 of `CStackFrame`, after `code`).
 - **Check:** same as A1 for the hashes (`grep -o '{"hash": "3083410640"[^}]*}'` …): the `LogChannel*` entries have no symbol name either. Find the new native through RTTI (`get_function(CName::new("LogChannel"))`'s native handler), like A1. Use the `Debug.reds` smoke lines for the levels and the script path, and any Codeware-based plugin for the native path.
 - **Fix:** update the hashes and their `// 0x… (2.31)` comments, `Channel` names or levels, or the argument reads in `capture`. If the natives' signatures change, update `crates/yap/reds/DebugNatives.reds` too.
 
@@ -169,7 +171,8 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
   - `Hook::new(original, cb_ref, detour_ref)` is public (it's `#[doc(hidden)]`).
   - `SdkEnv::attach_hook` / `detach_hook` take `FnPtr` types, which aren't implemented for variadic fn pointers. That's why `narrow_f` / `wide_f` transmute to `Narrow`.
   - `red4ext_rs::internal::PluginInfo` is exported.
-  - `ftlog.rs` uses `StackFrame::{instr_at, has_code, args_state, restore_args, step, get_arg, func}`, `InvokeStatic`, `CALL_INSTR_SIZE`, `OPCODE_SIZE` and `addr_hashes::resolve`.
+  - `CStackFrame::func` is word 1 of the frame (after `code`), and is null for natives called through `Function::Execute`. `config::func` reads it null-safely, instead of red4ext-rs's `StackFrame::func()`, which never checks. Replace it if a red4ext-rs bump adds a null-safe accessor.
+  - `ftlog.rs` / `logchannel.rs` use `StackFrame::{instr_at, has_code, args_state, restore_args, step, get_arg}`, `InvokeStatic`, `CALL_INSTR_SIZE`, `OPCODE_SIZE` and `addr_hashes::resolve`.
   - `script_log!` in `crates/yap/src/lib.rs` mirrors red4ext-rs's `global!` expansion (`src/invocable.rs`) instead of calling it:
     - It builds `GlobalMetadata::new(name, handler, &signature)` itself. That function is `pub` but `#[doc(hidden)]`.
     - `handler` is a `FunctionHandler<IScriptable, VoidPtr>`, i.e. `extern "C" fn(&IScriptable, &mut StackFrame, VoidPtr, i64)`.
