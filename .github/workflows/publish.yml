@@ -24,23 +24,33 @@ on:
 permissions:
   contents: read
 
+# single global lane: two tags must never race on the same Nexus files / mod version
 concurrency:
-  group: nexus-publish-${{ inputs.tag }}
+  group: nexus-publish
   cancel-in-progress: false
 
 jobs:
   validate:
-    if: github.actor == 'Roms' && github.triggering_actor == 'Roms'
     runs-on: ubuntu-latest
     outputs:
       variants: ${{ steps.check.outputs.variants }}
       version: ${{ steps.check.outputs.version }}
+      digests: ${{ steps.check.outputs.digests }}
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ inputs.tag }}
       VARIANTS: ${{ inputs.variants }}
       ALLOW_PRE: ${{ inputs.allow_prerelease }}
     steps:
+      # belt and braces only: the real gate is the `nexusmods` environment protection rules
+      - name: Check actor and ref
+        env:
+          ACTOR: ${{ github.triggering_actor }}
+          REF: ${{ github.ref }}
+        run: |
+          [[ "$ACTOR" == Roms1383 ]] || { echo "::error::$ACTOR is not allowed to publish"; exit 1; }
+          [[ "$REF" == refs/heads/main ]] || { echo "::error::Dispatch from main, not $REF"; exit 1; }
+
       - id: check
         run: |
           set -euo pipefail
@@ -53,30 +63,48 @@ jobs:
             *) echo "::error::Unknown variant: $VARIANTS"; exit 1 ;;
           esac
 
-          info=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets)
-          [[ $(jq -r .isDraft <<<"$info") == false ]] \
+          # drafts are not returned by this endpoint at all
+          info=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG") \
+            || { echo "::error::No published release for $TAG"; exit 1; }
+          [[ $(jq -r .draft <<<"$info") == false ]] \
             || { echo "::error::$TAG is a draft"; exit 1; }
-          if [[ $(jq -r .isPrerelease <<<"$info") == true && "$ALLOW_PRE" != true ]]; then
+          if [[ $(jq -r .prerelease <<<"$info") == true && "$ALLOW_PRE" != true ]]; then
             echo "::error::$TAG is still a pre-release: promote it first, or tick allow_prerelease"; exit 1
           fi
 
+          # never go backwards: update_mod_version + archive_existing_version would
+          # downgrade the mod page and archive the newer file.
+          # NB: sort -V ranks v0.3.0 before v0.3.0-rc.1 (only matters with allow_prerelease)
+          highest=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/nexus/v" --jq '.[].ref' \
+            | sed -E 's#^refs/tags/nexus/##; s#-(hook|no-hook)$##' | sort -uV | tail -n1)
+          if [[ -n "$highest" && "$highest" != "$TAG" ]]; then
+            top=$(printf '%s\n%s\n' "$highest" "$TAG" | sort -V | tail -n1)
+            [[ "$top" == "$TAG" ]] \
+              || { echo "::error::$TAG is older than $highest, already on Nexus"; exit 1; }
+          fi
+
+          digests='{}'
           for v in $(jq -r '.[]' <<<"$list"); do
             suffix=""; [[ $v == no-hook ]] && suffix="-NO_HOOK"
             asset="Yap-windows-${TAG}${suffix}.zip"
-            jq -e --arg n "$asset" '.assets | any(.name == $n)' <<<"$info" >/dev/null \
-              || { echo "::error::Missing release asset $asset"; exit 1; }
+            digest=$(jq -r --arg n "$asset" '.assets[] | select(.name == $n) | .digest // empty' <<<"$info")
+            [[ -n "$digest" ]] \
+              || { echo "::error::Missing release asset $asset (or its digest)"; exit 1; }
+            digests=$(jq -c --arg v "$v" --arg d "$digest" '. + {($v): $d}' <<<"$digests")
             if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/nexus/$TAG-$v" >/dev/null 2>&1; then
               echo "::error::$TAG ($v) was already published to Nexus"; exit 1
             fi
           done
 
-          echo "variants=$list"  >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "variants=$list"    >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}"  >> "$GITHUB_OUTPUT"
+          echo "digests=$digests"  >> "$GITHUB_OUTPUT"
 
   upload:
     needs: validate
     runs-on: ubuntu-latest
-    environment: nexusmods            # holds secrets.NEXUSMODS_API_KEY
+    # dry runs need neither approval nor the API key
+    environment: ${{ !inputs.dry_run && 'nexusmods' || '' }}   # holds secrets.NEXUSMODS_API_KEY
     permissions:
       contents: write                 # only for the nexus/<tag>-<variant> marker
     strategy:
@@ -84,16 +112,18 @@ jobs:
       max-parallel: 1
       matrix:
         variant: ${{ fromJSON(needs.validate.outputs.variants) }}
+    # GH_TOKEN is scoped per step on purpose: the third-party upload step must not see it
     env:
-      GH_TOKEN: ${{ github.token }}
       TAG: ${{ inputs.tag }}
       VARIANT: ${{ matrix.variant }}
     steps:
       - name: Download ${{ matrix.variant }} build
         id: asset
         env:
+          GH_TOKEN: ${{ github.token }}
           ID_HOOK: ${{ vars.NEXUS_FILE_ID_HOOK }}
           ID_NO_HOOK: ${{ vars.NEXUS_FILE_ID_NO_HOOK }}
+          DIGESTS: ${{ needs.validate.outputs.digests }}
         run: |
           set -euo pipefail
           case "$VARIANT" in
@@ -103,12 +133,29 @@ jobs:
           [[ -n "$file_id" ]] || { echo "::error::No Nexus file ID set for $VARIANT"; exit 1; }
           asset="Yap-windows-${TAG}${suffix}.zip"
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" --pattern "$asset" --dir .
-          sha256sum "$asset" >> "$GITHUB_STEP_SUMMARY"
+          expected=$(jq -r --arg v "$VARIANT" '.[$v]' <<<"$DIGESTS")
+          actual="sha256:$(sha256sum "$asset" | cut -d' ' -f1)"
+          [[ "$actual" == "$expected" ]] \
+            || { echo "::error::$asset changed since validation ($actual != $expected)"; exit 1; }
+          echo "\`$asset\` $actual" >> "$GITHUB_STEP_SUMMARY"
           { echo "file=$asset"; echo "file_id=$file_id"; echo "label=$label"; } >> "$GITHUB_OUTPUT"
+
+      # claimed *before* uploading: creating an existing ref fails (422), so this is an
+      # atomic lock against double publishing. A failed upload leaves the claim in place.
+      - name: Claim marker
+        id: claim
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/nexus/$TAG-$VARIANT" -f sha="$sha" >/dev/null
 
       - name: Upload to Nexus Mods
         if: ${{ !inputs.dry_run }}
-        uses: Nexus-Mods/upload-action@<commit-sha>   # pin to a full SHA
+        uses: Nexus-Mods/upload-action@c96019556046053aa26044b44396cd38929daf23   # v1.0.0-beta.10
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           file_id: ${{ steps.asset.outputs.file_id }}
@@ -118,10 +165,13 @@ jobs:
           archive_existing_version: true
           update_mod_version: true
 
-      - name: Mark as published
-        if: ${{ !inputs.dry_run }}
+      - name: Explain how to release the claim
+        if: ${{ failure() && steps.claim.outcome == 'success' }}
         run: |
-          set -euo pipefail
-          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f ref="refs/tags/nexus/$TAG-$VARIANT" -f sha="$sha"
+          {
+            echo "### Upload of $TAG ($VARIANT) failed after claiming its marker"
+            echo "Check the Nexus file page first. If nothing was uploaded, release the claim and re-run:"
+            echo '```sh'
+            echo "gh api -X DELETE repos/$GITHUB_REPOSITORY/git/refs/tags/nexus/$TAG-$VARIANT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
