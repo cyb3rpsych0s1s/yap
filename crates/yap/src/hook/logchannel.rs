@@ -16,7 +16,8 @@ enum Level {
     Error,
 }
 
-/// a global `LogChannel*(channel: CName, text: String)` native, a stub in retail builds
+/// a global `LogChannel*(channel: CName, text: script_ref<String>)` native,
+/// which reads its arguments but logs nothing in retail builds
 struct Channel {
     name: &'static str,
     level: Level,
@@ -35,12 +36,12 @@ const LOG_CHANNEL_ERROR: Channel = Channel {
     level: Level::Error,
 };
 
-/// `LogChannel` and `LogChannelError` share a single stub (identical code folding),
+/// `LogChannel` and `LogChannelError` share a single native (identical code folding),
 /// which can only be hooked once: one detour for both, told apart by the callee's name
 const SHARED: &[Channel] = &[LOG_CHANNEL, LOG_CHANNEL_ERROR];
 const WARNING: &[Channel] = &[LOG_CHANNEL_WARNING];
 
-/// address hashes in RED4ext's address database, any of which resolves to the stub
+/// address hashes in RED4ext's address database, any of which resolves to the native
 const SHARED_HASHES: &[u32] = &[0xB7C91CD0, 0x63201EDA]; // 0x140D279D8 (2.31)
 const WARNING_HASHES: &[u32] = &[0xA9621FA6]; // 0x14205573C (2.31)
 
@@ -96,7 +97,7 @@ unsafe fn capture(f: *mut StackFrame, natives: &[Channel]) {
         let (native, caller) = match callee {
             Some(callee) => match named(callee) {
                 Some(native) => (native, Some(std::ptr::from_ref(frame.func()))),
-                None => return, // another native sharing the stub
+                None => return, // another native sharing the address
             },
             // not called from scripts (e.g. from another native plugin, like Codeware's `Red::Log`)
             None => (named(frame.func()).unwrap_or(&natives[0]), None),
