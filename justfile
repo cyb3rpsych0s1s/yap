@@ -58,6 +58,8 @@ delete path:
     just delete '{{ join(from, red4ext_dir, lowercase(package)) }}'
     just delete '{{ join(from, redscript_dir, package) }}'
 
+# strips the debug harness from releases, including `DebugNatives.reds`'s
+# root-namespace re-declarations of game natives, which must never ship
 [private]
 no-debug path:
     @Get-ChildItem -Path '{{ path }}' -Recurse -Filter 'Debug*.reds' | Remove-Item -Force
