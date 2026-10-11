@@ -27,7 +27,7 @@ permissions:
 # Nexus "file" IDs (Files tab > Advanced, or Manage Files > edit), not secret.
 # Each file must already exist with one upload: the action only adds versions to it.
 env:
-  NEXUS_MOD_ID: "34906"              # needed by the action to post the changelog
+  NEXUS_MOD_ID: "14315126032474"     # needed by the action to post the changelog
   NEXUS_FILE_ID_HOOK: "8117220"      # the "Yap" file
   NEXUS_FILE_ID_NO_HOOK: "8117226"   # the "Yap (NO_HOOK)" file
   # `uses:` takes no expressions, hence the YAML anchor (must be the full owner/repo@sha)
