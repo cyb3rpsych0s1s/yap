@@ -2,13 +2,12 @@ use super::ftlog::{Native, REF_INSTR_SIZE, is_string_ref, message};
 use crate::config;
 use crate::log::{chan, red4};
 use red4ext_rs::{
-    NativeRepr, RttiSystem, SdkEnv, VoidPtr, addr_hashes,
+    SdkEnv, VoidPtr, addr_hashes,
     types::{
         CALL_INSTR_SIZE, CName, Function, IScriptable, InvokeStatic, OPCODE_SIZE, RedString,
         ScriptRef, StackFrame,
     },
 };
-use std::sync::OnceLock;
 
 #[derive(Clone, Copy)]
 enum Level {
@@ -46,36 +45,19 @@ const WARNING: &[Channel] = &[LOG_CHANNEL_WARNING];
 const SHARED_HASHES: &[u32] = &[0xB7C91CD0, 0x63201EDA]; // 0x140D279D8 (2.31)
 const WARNING_HASHES: &[u32] = &[0xA9621FA6]; // 0x14205573C (2.31)
 
-/// whether the declared `text` parameter is a `script_ref<String>` rather than a `String`,
-/// `None` when neither: native callers pass it as declared, so reading the wrong type would corrupt memory.
-/// Cached, since [`RttiSystem::get`] takes the RTTI write lock. The three natives share the same shape.
-fn text_is_ref() -> Option<bool> {
-    static TEXT: OnceLock<Option<bool>> = OnceLock::new();
-    *TEXT.get_or_init(|| {
-        let rtti = RttiSystem::get();
-        let func = rtti.get_function(CName::new(LOG_CHANNEL.name))?;
-        let text = func.params().get(1)?.type_().name();
-        if text == CName::new(RedString::NAME) {
-            Some(false)
-        } else if text == CName::new("script_ref:String") {
-            Some(true)
-        } else {
-            None
-        }
-    })
-}
-
-fn log(level: Level, channel: CName, caller: Option<&Function>, msg: &RedString) {
+/// `[<native>:<channel>] Class::Func msg`
+fn log(native: &Channel, channel: CName, caller: Option<&Function>, msg: &RedString) {
+    let channel = channel.as_str();
     let Some(msg) = message(msg) else {
-        return;
+        return red4::trace!("{}:{channel}: dropped empty or invalid text", native.name);
     };
     let (color, reset) = (chan::color(), chan::reset());
+    let name = native.name;
     let caller = crate::config::caller(caller);
-    let channel = channel.as_str();
-    match level {
-        Level::Info => chan::pipe!("[{color}{channel}{reset}] {caller}{msg}"),
-        Level::Warn => chan::warn!("[{color}{channel}{reset}] {caller}{msg}"),
-        Level::Error => chan::error!("[{color}{channel}{reset}] {caller}{msg}"),
+    match native.level {
+        Level::Info => chan::pipe!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
+        Level::Warn => chan::warn!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
+        Level::Error => chan::error!("[{color}{name}:{channel}{reset}] {caller}{msg}"),
     }
 }
 
@@ -95,6 +77,7 @@ unsafe fn capture(f: *mut StackFrame, natives: &[Channel]) {
             .instr_at::<InvokeStatic>(-CALL_INSTR_SIZE - OPCODE_SIZE)
             .and_then(|call| { call.func }.as_ref());
         // script caller, as a pointer so that its borrow of the frame ends before stepping
+        let from_script = callee.is_some();
         let (native, caller) = match callee {
             Some(callee) => match named(callee) {
                 Some(native) => (native, config::func(frame).map(std::ptr::from_ref)),
@@ -111,7 +94,7 @@ unsafe fn capture(f: *mut StackFrame, natives: &[Channel]) {
 
         let state = frame.args_state();
         let channel = StackFrame::get_arg::<CName>(frame);
-        let msg = if caller.is_some() {
+        let msg = if from_script {
             // evaluate the expression by value, rather than referencing a temporary
             // which the engine destroys as soon as the argument has been read
             if is_string_ref(f) {
@@ -121,18 +104,17 @@ unsafe fn capture(f: *mut StackFrame, natives: &[Channel]) {
             }
             Some(StackFrame::get_arg::<RedString>(frame))
         } else {
-            match text_is_ref() {
-                Some(true) => StackFrame::get_arg::<ScriptRef<RedString>>(frame)
-                    .value()
-                    .cloned(),
-                Some(false) => Some(StackFrame::get_arg::<RedString>(frame)),
-                None => None,
-            }
+            // the natives always read `text` as a ref (both out-pointers set),
+            // so native callers must pass a `script_ref<String>`
+            StackFrame::get_arg::<ScriptRef<RedString>>(frame)
+                .value()
+                .cloned()
         };
         frame.restore_args(state);
 
-        if let Some(msg) = msg {
-            log(native.level, channel, caller.and_then(|c| c.as_ref()), &msg);
+        match msg {
+            Some(msg) => log(native, channel, caller.and_then(|c| c.as_ref()), &msg),
+            None => red4::trace!("{}:{channel}: no text from native caller", native.name),
         }
     }
 }
