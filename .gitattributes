@@ -1,0 +1,6 @@
+# LF everywhere, regardless of the platform or `core.autocrlf`
+* text=auto eol=lf
+
+*.png binary
+*.dll binary
+*.exe binary

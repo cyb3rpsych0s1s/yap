@@ -43,7 +43,7 @@ fn log(caller: Option<&Function>, msg: &RedString) {
         }
         _ => return, // empty, invalid UTF-8 or control characters: drop it
     };
-    ftlog::pipe!("{}{msg}", crate::log::caller(caller));
+    ftlog::pipe!("{}{msg}", crate::config::caller(caller));
 }
 
 unsafe extern "C" fn detour(

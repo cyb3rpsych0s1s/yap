@@ -1,6 +1,6 @@
 use super::ftlog::FTLOG_HASH;
+use crate::config::{self, enabled};
 use crate::log::{
-    self, enabled,
     ext::{color, reset},
     red4,
 };
@@ -59,7 +59,7 @@ const KERNEL: &str = "kernel32.dll";
 /// UTF-16 units for a module path, long enough for paths past the legacy `MAX_PATH` (260)
 const PATH_BUF_LEN: usize = 1024;
 /// `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Critical`
-const LOGGER_LEVELS: usize = log::CRITICAL + 1;
+const LOGGER_LEVELS: usize = config::CRITICAL + 1;
 /// variants of each level, in `Logger` table order
 const VARIANTS: usize = 4;
 /// `(PluginHandle, const char*)`
@@ -482,12 +482,12 @@ macro_rules! taps {
 }
 
 taps! {
-    log::TRACE, "Trace": trace, trace_f, trace_w, trace_wf;
-    log::DEBUG, "Debug": debug, debug_f, debug_w, debug_wf;
-    log::INFO, "Info": info, info_f, info_w, info_wf;
-    log::WARN, "Warn": warn, warn_f, warn_w, warn_wf;
-    log::ERROR, "Error": error, error_f, error_w, error_wf;
-    log::CRITICAL, "Critical": critical, critical_f, critical_w, critical_wf;
+    config::TRACE, "Trace": trace, trace_f, trace_w, trace_wf;
+    config::DEBUG, "Debug": debug, debug_f, debug_w, debug_wf;
+    config::INFO, "Info": info, info_f, info_w, info_wf;
+    config::WARN, "Warn": warn, warn_f, warn_w, warn_wf;
+    config::ERROR, "Error": error, error_f, error_w, error_wf;
+    config::CRITICAL, "Critical": critical, critical_f, critical_w, critical_wf;
 }
 
 /// address range of the module image in memory, read from its PE headers
