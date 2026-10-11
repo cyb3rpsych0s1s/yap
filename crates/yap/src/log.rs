@@ -104,6 +104,31 @@ macro_rules! __yap_ext_debug { ($($arg:tt)+) => { $crate::log!(ext, debug, $($ar
 #[macro_export]
 macro_rules! __yap_ext_trace { ($($arg:tt)+) => { $crate::log!(ext, trace, $($arg)+) } }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_error { ($($arg:tt)+) => { $crate::log!(chan, error, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_warn { ($($arg:tt)+) => { $crate::log!(chan, warn, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_info { ($($arg:tt)+) => { $crate::log!(chan, info, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_life { ($($arg:tt)+) => { $crate::log!(chan, life, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_pipe { ($($arg:tt)+) => { $crate::log!(chan, pipe, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_hook { ($($arg:tt)+) => { $crate::log!(chan, hook, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_debug { ($($arg:tt)+) => { $crate::log!(chan, debug, $($arg)+) } }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __yap_chan_trace { ($($arg:tt)+) => { $crate::log!(chan, trace, $($arg)+) } }
+
 // yellow
 #[rustfmt::skip]
 scoped!(red4, "\x1b[33m",
@@ -151,4 +176,16 @@ scoped!(ext, "\x1b[35m",
     hook = __yap_ext_hook,
     debug = __yap_ext_debug,
     trace = __yap_ext_trace,
+);
+// cyan
+#[rustfmt::skip]
+scoped!(chan, "\x1b[36m",
+    error = __yap_chan_error,
+    warn = __yap_chan_warn,
+    info = __yap_chan_info,
+    life = __yap_chan_life,
+    pipe = __yap_chan_pipe,
+    hook = __yap_chan_hook,
+    debug = __yap_chan_debug,
+    trace = __yap_chan_trace,
 );

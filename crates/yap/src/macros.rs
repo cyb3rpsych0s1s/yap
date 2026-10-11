@@ -9,6 +9,15 @@ macro_rules! __emit {
             format_args!($($arg)+)
         )
     };
+    // the game's `LogChannel*`: the line carries its own `[<channel>]` tag
+    ($level:ident, $icon:literal, chan, $($arg:tt)+) => {{
+        let icon = $icon.to_string();
+        $crate::__private::red4ext_rs::log::$level!(
+            "{icon}{}{}",
+            if icon.is_empty() { "" } else { " " },
+            format_args!($($arg)+)
+        )
+    }};
     ($level:ident, $icon:literal, $name:ident, $($arg:tt)+) => {
         $crate::__private::red4ext_rs::log::$level!(
             "{} {}[{:^6}]{} {}",
