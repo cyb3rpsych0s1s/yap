@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       dry_run:
-        description: "Run all checks but skip the upload"
+        description: "Run all checks but skip upload (dry-run)"
         type: boolean
         default: true
 
@@ -27,6 +27,7 @@ permissions:
 # Nexus "file" IDs (Files tab > Advanced, or Manage Files > edit), not secret.
 # Each file must already exist with one upload: the action only adds versions to it.
 env:
+  NEXUS_MOD_ID: "34906"              # needed by the action to post the changelog
   NEXUS_FILE_ID_HOOK: "8117220"      # the "Yap" file
   NEXUS_FILE_ID_NO_HOOK: "8117226"   # the "Yap (NO_HOOK)" file
   # `uses:` takes no expressions, hence the YAML anchor (must be the full owner/repo@sha)
@@ -44,6 +45,7 @@ jobs:
       variants: ${{ steps.check.outputs.variants }}
       version: ${{ steps.check.outputs.version }}
       digests: ${{ steps.check.outputs.digests }}
+      changelog: ${{ steps.check.outputs.changelog }}
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ inputs.tag }}
@@ -97,9 +99,18 @@ jobs:
             fi
           done
 
+          # one changelog per mod version, listing every build of the release
+          # (not only the variants published by this run)
+          changelog=$(jq -r --arg t "$TAG" '
+            [ ["Yap-windows-\($t).zip",         "Github checksum: "],
+              ["Yap-windows-\($t)-NO_HOOK.zip", "Github checksum NO_HOOK: "] ][] as [$n, $l]
+            | .assets[] | select(.name == $n and .digest != null) | $l + .digest' <<<"$info")
+
           echo "variants=$list"    >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}"  >> "$GITHUB_OUTPUT"
           echo "digests=$digests"  >> "$GITHUB_OUTPUT"
+          { echo "changelog<<CHANGELOG_EOF"; echo "$changelog"; echo "CHANGELOG_EOF"; } >> "$GITHUB_OUTPUT"
+          { echo "### Changelog"; echo '```log'; echo "$changelog"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   upload:
     needs: validate
@@ -126,8 +137,8 @@ jobs:
         run: |
           set -euo pipefail
           case "$VARIANT" in
-            hook)    suffix="";         file_id="$NEXUS_FILE_ID_HOOK";    label="Yap" ;;
-            no-hook) suffix="-NO_HOOK"; file_id="$NEXUS_FILE_ID_NO_HOOK"; label="Yap (NO_HOOK)" ;;
+            hook)    suffix="";         file_id="$NEXUS_FILE_ID_HOOK";    label="Yap";           category="main" ;;
+            no-hook) suffix="-NO_HOOK"; file_id="$NEXUS_FILE_ID_NO_HOOK"; label="Yap (NO_HOOK)"; category="miscellaneous" ;;
           esac
           [[ -n "$file_id" ]] || { echo "::error::No Nexus file ID set for $VARIANT"; exit 1; }
           asset="Yap-windows-${TAG}${suffix}.zip"
@@ -137,7 +148,7 @@ jobs:
           [[ "$actual" == "$expected" ]] \
             || { echo "::error::$asset changed since validation ($actual != $expected)"; exit 1; }
           echo "\`$asset\` $actual" >> "$GITHUB_STEP_SUMMARY"
-          { echo "file=$asset"; echo "file_id=$file_id"; echo "label=$label"; } >> "$GITHUB_OUTPUT"
+          { echo "file=$asset"; echo "file_id=$file_id"; echo "label=$label"; echo "category=$category"; } >> "$GITHUB_OUTPUT"
 
       # claimed *before* uploading: creating an existing ref fails (422), so this is an
       # atomic lock against double publishing. A failed upload leaves the claim in place.
@@ -161,6 +172,11 @@ jobs:
           filename: ${{ steps.asset.outputs.file }}
           version: ${{ needs.validate.outputs.version }}
           display_name: ${{ steps.asset.outputs.label }}
+          category: ${{ steps.asset.outputs.category }}
+          # the action POSTs a new changelog entry on every upload: only send it with the
+          # first variant of this run, or "both" would list it twice on the mod page
+          mod_id: ${{ matrix.variant == fromJSON(needs.validate.outputs.variants)[0] && env.NEXUS_MOD_ID || '' }}
+          changelog: ${{ matrix.variant == fromJSON(needs.validate.outputs.variants)[0] && needs.validate.outputs.changelog || '' }}
           archive_existing_version: false
           update_mod_version: true
 
