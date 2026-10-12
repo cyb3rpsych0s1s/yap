@@ -25,7 +25,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_NET_GIT_FETCH_WITH_CLI: true
   BIN-FOLDER: bundle${{ !inputs.hook && '-no-hook' || '' }}
-  BUILD-FEATURES: ${{ inputs.hook && 'default' || 'no-default' }}
+  BUILD-FLAVOR: ${{ inputs.hook && 'hook' || 'no-hook' }}
   ARTIFACT-NAME: Yap-windows-${{ inputs.tag }}${{ !inputs.hook && '-NO_HOOK' || '' }}
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
         with:
           tool: just
       - name: Bundle mod files
-        run: just ci Yap ${{ env.BIN-FOLDER }} ${{ env.BUILD-FEATURES }}
+        run: just ci ${{ env.BIN-FOLDER }} ${{ env.BUILD-FLAVOR }}
       - name: Zip files
         uses: thedoctor0/zip-release@0.7.6
         with:

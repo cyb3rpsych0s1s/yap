@@ -12,6 +12,16 @@ here := justfile_directory()
 redscript_dir := join("r6", "scripts")
 red4ext_dir := join("red4ext", "plugins")
 
+package := 'Yap'
+
+# cargo features of each flavor
+# NO_HOOK keeps `plugin`: without it the DLL exports nothing
+# crate is for red4ext-rs developers only: never deployed
+
+hook_features := ''
+no_hook_features := '--no-default-features --features plugin'
+crate_features := '--no-default-features'
+
 # shortcuts
 
 [private]
@@ -34,25 +44,29 @@ delete path:
 
 # commands
 
-@setup package to=game_dir:
+@setup to=game_dir:
     just create '{{ join(to, red4ext_dir, lowercase(package)) }}'
     just create '{{ join(to, redscript_dir, package) }}'
 
-@build package to=game_dir features='default':
-    cargo build -p '{{ lowercase(package) }}' --release {{ if features == "no-default" { "--no-default-features" } else { "" } }}
+@build to=game_dir features='':
+    cargo build -p '{{ lowercase(package) }}' --release {{ features }}
     just copy '{{ join(here, "target", "release", lowercase(package) + ".dll") }}' '{{ join(to, red4ext_dir, lowercase(package), lowercase(package) + ".dll") }}'
-@build-dbg package to=game_dir:
-    cargo build -p '{{ lowercase(package) }}'
+@build-dbg to=game_dir features='':
+    cargo build -p '{{ lowercase(package) }}' {{ features }}
     just copy '{{ join(here, "target", "debug", lowercase(package) + ".dll") }}' '{{ join(to, red4ext_dir, lowercase(package), lowercase(package) + ".dll") }}'
     just copy '{{ join(here, "target", "debug", lowercase(package) + ".pdb") }}' '{{ join(to, red4ext_dir, lowercase(package), lowercase(package) + ".pdb") }}'
 
-@reds package to=game_dir:
+@reds to=game_dir:
     just copy-recurse '{{ join(here, "crates", lowercase(package), "reds", "*") }}' '{{ join(to, redscript_dir, package) }}'
 
-@reload package to=game_dir: (reds package to)
+@reload to=game_dir: (reds to)
 
-@dev package features='default': (setup package) (build package game_dir features) (reload package)
-@dbg package: (setup package) (build-dbg package) (reload package)
+@no-hook to=game_dir: (setup to) (build to no_hook_features) (reload to)
+@hook to=game_dir: (setup to) (build to hook_features) (reload to)
+@crate:
+    cargo build -p '{{ lowercase(package) }}' --release {{ crate_features }}
+
+@dbg to=game_dir: (setup to) (build-dbg to) (reload to)
 
 @uninstall package from=game_dir:
     just delete '{{ join(from, red4ext_dir, lowercase(package)) }}'
@@ -64,21 +78,25 @@ delete path:
 no-debug path:
     @Get-ChildItem -Path '{{ path }}' -Recurse -Filter 'Debug*.reds' | Remove-Item -Force
 
-@ci package folder features='default':
-    just setup '{{ package }}' '{{ join(here, folder, "bin") }}'
+# flavor: hook | no-hook
+@ci folder flavor='hook':
+    {{ if flavor =~ '^(hook|no-hook)$' { "" } else { error("unknown flavor '" + flavor + "', expected hook or no-hook") } }}
+    just setup '{{ join(here, folder, "bin") }}'
     just create '{{ join(here, folder, "pdb", red4ext_dir, lowercase(package)) }}'
-    just build '{{ package }}' '{{ join(here, folder, "bin") }}' '{{ features }}'
+    just build '{{ join(here, folder, "bin") }}' '{{ if flavor == "no-hook" { no_hook_features } else { hook_features } }}'
     just copy '{{ join(here, "target", "release", lowercase(package) + ".pdb") }}' '{{ join(here, folder, "pdb", red4ext_dir, lowercase(package), lowercase(package) + ".pdb") }}'
-    just reload '{{ package }}' '{{ join(here, folder, "bin") }}'
+    just reload '{{ join(here, folder, "bin") }}'
     just no-debug '{{ join(here, folder, "bin") }}'
 
 @check:
-    cargo check -p yap --release
-    cargo check -p yap --release --no-default-features
+    cargo check -p '{{ lowercase(package) }}' --release {{ hook_features }}
+    cargo check -p '{{ lowercase(package) }}' --release {{ no_hook_features }}
+    cargo check -p '{{ lowercase(package) }}' --release {{ crate_features }}
 
 @qa:
-    cargo clippy -p yap -- -D warnings
-    cargo clippy -p yap --no-default-features -- -D warnings
+    cargo clippy -p '{{ lowercase(package) }}' {{ hook_features }} -- -D warnings
+    cargo clippy -p '{{ lowercase(package) }}' {{ no_hook_features }} -- -D warnings
+    cargo clippy -p '{{ lowercase(package) }}' {{ crate_features }} -- -D warnings
     cargo fmt --all --check
 
 @log package TO=game_dir:

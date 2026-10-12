@@ -40,7 +40,7 @@ yap doesn't depend on any particular mod. FTLog lines come from any script that 
 
 ## Triage: read the logs first
 
-Commands: `just dbg Yap` (debug build + deploy), launch the game, then `just log yap`. All hooks (`src/hook/`, FTLog, `Logger` detours, mirroring, self-test, and the `libloading` dependency) are behind the **default** `hook` cargo feature. Building with `--no-default-features` (release: `just dev Yap no-default`) leaves only the config.ini level, the formatting macros and the `Yap.*` script natives. In that variant expected lines 2–4, 6, 7, 8 and 10 below don't appear, and sections A1–A4, B1–B4, C1, C2's hook parts and D1–D3 don't apply. Also open `<game>/red4ext/logs/red4ext.log`, which records plugin load failures, API version mismatches and hook errors.
+Commands: `just dbg` (debug build + deploy), launch the game, then `just log yap`. All hooks (`src/hook/`, FTLog, `Logger` detours, mirroring, self-test, and the `libloading` dependency) are behind the **default** `hook` cargo feature. Building with `--no-default-features --features plugin` (release: `just no-hook`; dropping `plugin` too would leave a DLL with no exports) leaves only the config.ini level, the formatting macros and the `Yap.*` script natives. In that variant expected lines 2–4, 6, 7, 8 and 10 below don't appear, and sections A1–A4, B1–B4, C1, C2's hook parts and D1–D3 don't apply. Also open `<game>/red4ext/logs/red4ext.log`, which records plugin load failures, API version mismatches and hook errors.
 
 Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test needs a debug build; every other line only depends on the level). Lines marked *(trace)* are `red4::trace!` diagnostics. They only appear on a **trace run**: `level = "trace"` in `<game>/red4ext/config.ini`, in any build. Set it for the diagnostic run, then restore the previous level.
 
@@ -108,7 +108,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 ### A5. Codeware / script API used by `Debug.reds`
 - **Assumes:** the public `Yap.*` natives in `Log.reds` match the `global!(c"Yap.<Name>", …)` exports in `src/lib.rs` (name and `String` argument), plus `ScriptableService` callbacks (`OnLoad`, `OnInitialize`, `OnUninitialize`, `OnReload`), `GameInstance.GetCallbackSystem()`, `RegisterCallback`, `GameSessionEvent`, the event names `Session/BeforeStart|Start|Ready|BeforeEnd|End`, and `ScriptableSystem.OnAttach/OnDetach`.
 - **Check:** the redscript compile errors in `red4ext/logs` or `r6/logs/redscript_rCURRENT.log`, and the Codeware changelog.
-- **Fix:** update `Debug.reds` (or `Log.reds` together with the matching exports in `src/lib.rs`, since they're a public API other mods compile against), then deploy with `just reload Yap`.
+- **Fix:** update `Debug.reds` (or `Log.reds` together with the matching exports in `src/lib.rs`, since they're a public API other mods compile against), then deploy with `just reload`.
 
 ### A6. `LogChannel*` natives: `logchannel.rs`
 - **Assumes:**
@@ -208,8 +208,8 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 
 ## Verification checklist
 
-1. Both configurations: `cargo clippy -p yap -- -D warnings` and `cargo clippy -p yap --no-default-features -- -D warnings`, then `cargo build -p yap` and `cargo build -p yap --no-default-features`. `cargo tree -p yap -e normal --no-default-features` must not list `libloading`.
-2. `just dbg Yap`, launch the game and load a save. Also do one run with `just dev Yap no-default` (release, no hooks): only `RED4ext log level: …` and the `Yap.*` / `Debug.reds` lines, with no FTLog attach, no `[FTLog]`, no mirrored lines and no self-test.
+1. Every flavor (hook, NO_HOOK, crate): `just check` and `just qa`. `cargo tree -p yap -e normal --no-default-features --features plugin` must not list `libloading`.
+2. `just dbg`, launch the game and load a save. Also do one run with `just no-hook` (release, no hooks): only `RED4ext log level: …` and the `Yap.*` / `Debug.reds` lines, with no FTLog attach, no `[FTLog]`, no mirrored lines and no self-test.
 3. `just log yap` matches the expected start in **Triage** (lines 1–8, where 3, 4 and 6 only appear on a trace run), shows `WaWaWaWa`, and shows mirrored `[plugin]` lines with the name in purple (`\x1b[35m`) (unless colors are opted out: no `colors = false` in `red4ext/plugins/yap/config.ini`, no `NO_COLOR`).
 4. Set `level = "info"` in `<game>/red4ext/config.ini`, relaunch, and check that `RED4ext log level: Info` appears, without the config path, and that no `Debug*` self-test lines do. Then restore the previous value.
 4b. Optional diagnostic run: set `level = "trace"`, relaunch, and check that the *(trace)* lines 3, 4 (`equal: true`) and 6 appear. Then restore the previous value.

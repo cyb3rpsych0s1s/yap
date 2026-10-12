@@ -11,7 +11,7 @@ name = "yap"
 [features]
 default = ["plugin", "hook"]
 # detours of FTLog and RED4ext's Logger: the only part of yap built around raw pointers,
-# opt out with `--no-default-features`
+# opt out with `--no-default-features --features plugin` (`plugin` must stay on, or the DLL exports nothing)
 hook = ["dep:libloading"]
 plugin = []
 

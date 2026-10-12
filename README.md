@@ -193,9 +193,10 @@ environment variable turns them off too.
 Requires [just][just]. Set `GAME_DIR` in a `.env`
 if the game isn't in Steam's default folder.
 
-- `just dev Yap`: release build, deployed to the game.
-- `just dev Yap no-default`: same, `NO_HOOK` flavor.
-- `just dbg Yap`: debug build with the `Debug.reds` harness
+- `just hook`: release build, deployed to the game.
+- `just no-hook`: same, `NO_HOOK` flavor.
+- `just crate`: release build of the standalone crate (no plugin, no hooks), not deployed.
+- `just dbg`: debug build with the `Debug.reds` harness
   (requires [Codeware][codeware]).
 - `just log yap`: pipe the latest log file to the terminal.
 
