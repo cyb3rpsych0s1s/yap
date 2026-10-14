@@ -3,3 +3,4 @@
 /Codeware-*
 /bundle*
 **/*.env
+**/CLAUDE.local.md
