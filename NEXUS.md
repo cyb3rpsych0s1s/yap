@@ -33,6 +33,7 @@ It comes in 2 flavors. Choose one.
 [*]captures the game's own [color=#f1c232][font=Roboto]FTLog[/font][/color] calls.[/*]
 [*]captures the game's own [color=#f1c232][font=Roboto]LogChannel[/font][/color], [color=#f1c232][font=Roboto]LogChannelWarning[/font][/color] and [color=#f1c232][font=Roboto]LogChannelError[/font][/color] calls.[/*]
 [*]captures every RED4ext [color=#f1c232][font=Roboto]Logger[/font][/color] calls.[/*]
+[*]captures every Cyber Engine Tweaks log line (mods' [color=#f1c232][font=Roboto]print[/font][/color], [color=#f1c232][font=Roboto]spdlog.*[/font][/color] and Lua errors), prefixed with [color=#f1c232][font=Roboto][ lua ][/font][/color] for [color=#f1c232][font=Roboto]print[/font][/color], otherwise [color=#f1c232][font=Roboto][CET:<mod>][/font][/color].[/*]
 [/list]
 
 The fully-featured version relies on game and RED4ext internals.
