@@ -18,6 +18,8 @@ const SINK_IT_SLOT: usize = 2;
 const FLUSH_SLOT: usize = 3;
 /// the same tag for every logger, which the logger name then tells apart
 const TAG: &str = "CET";
+/// Lua `print` and the console, shown as `[ lua ]` instead
+const SCRIPTING: &str = "scripting";
 
 /// spdlog `level::level_enum`, in the same order as [`crate::config::TRACE`]..[`crate::config::CRITICAL`]
 const TRACE: i32 = 0;
@@ -100,20 +102,25 @@ fn message(payload: &[u8]) -> Option<String> {
     (!msg.is_empty()).then(|| msg.to_owned())
 }
 
-/// `[CET:<logger>] msg`
+/// `[CET:<logger>] msg`, or `[ lua ] msg` for the `scripting` logger
 fn log(msg: &LogMsg) {
     let Some(payload) = message(msg.payload.as_bytes()) else {
         return;
     };
     let logger = String::from_utf8_lossy(msg.logger_name.as_bytes());
     let (grey, blue, reset) = (ftlog::color(), cet::color(), cet::reset());
+    let tag = if logger == SCRIPTING {
+        format!("{blue}[ lua ]{reset}")
+    } else {
+        format!("[{grey}{TAG}{reset}:{blue}{logger}{reset}]")
+    };
     match msg.level {
-        TRACE => cet::trace!("[{grey}{TAG}{reset}:{blue}{logger}{reset}] {payload}"),
-        DEBUG => cet::debug!("[{grey}{TAG}{reset}:{blue}{logger}{reset}] {payload}"),
-        INFO => cet::pipe!("[{grey}{TAG}{reset}:{blue}{logger}{reset}] {payload}"),
-        WARN => cet::warn!("[{grey}{TAG}{reset}:{blue}{logger}{reset}] {payload}"),
+        TRACE => cet::trace!("{tag} {payload}"),
+        DEBUG => cet::debug!("{tag} {payload}"),
+        INFO => cet::pipe!("{tag} {payload}"),
+        WARN => cet::warn!("{tag} {payload}"),
         // `err`, `critical`
-        _ => cet::error!("[{grey}{TAG}{reset}:{blue}{logger}{reset}] {payload}"),
+        _ => cet::error!("{tag} {payload}"),
     }
 }
 

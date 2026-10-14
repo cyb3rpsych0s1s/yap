@@ -49,7 +49,7 @@ This plugin comes in 2 flavors.
 - [x] captures every RED4ext plugin's log lines
   prefixed with `[<plugin>] …`.
 - [x] captures every [Cyber Engine Tweaks][cet] log line (mods' `print`, `spdlog.*` and Lua errors, the console, CET itself)
-  prefixed with `[CET:<logger>] …`, where `<logger>` is the mod's name, `scripting` or `main`.
+  prefixed with `[ lua ] …` for `print` and the console, otherwise `[CET:<logger>] …`, where `<logger>` is the mod's name or `main`.
 
 See details below.
 
@@ -168,7 +168,7 @@ At the matching level: `spdlog.trace` / `debug` / `info` / `warning` / `error` /
 The game's `FTLog` / `LogChannel*` lines CET copies to its `gamelog.log` aren't repeated.
 
 ```text
-[yap] [CET:scripting] hi
+[yap] [ lua ] hi
 [yap] 🔴 [CET:my_mod] [string "init.lua"]:12: attempt to index a nil value
 ```
 
@@ -189,7 +189,7 @@ They are also colored, with ANSI escape codes:
 | `[FTLog]`, `LogChannel`, `Class::Func` caller | grey |
 | `<channel>` (in `[LogChannel:<channel>]`) | cyan |
 | `[<plugin>]` | purple |
-| `<logger>` (in `[CET:<logger>]`) | blue |
+| `[ lua ]`, `<logger>` (in `[CET:<logger>]`) | blue |
 
 To opt out, create `<game>/red4ext/plugins/yap/config.ini` with:
 
