@@ -20,6 +20,8 @@ const FLUSH_SLOT: usize = 3;
 const TAG: &str = "CET";
 /// Lua `print` and the console, shown as `[ lua ]` instead
 const SCRIPTING: &str = "scripting";
+/// CET's own lifecycle (window, D3D12, hooks), shown as `🌱 [ lua ]` instead
+const MAIN: &str = "main";
 
 /// spdlog `level::level_enum`, in the same order as [`crate::config::TRACE`]..[`crate::config::CRITICAL`]
 const TRACE: i32 = 0;
@@ -102,14 +104,15 @@ fn message(payload: &[u8]) -> Option<String> {
     (!msg.is_empty()).then(|| msg.to_owned())
 }
 
-/// `[CET:<logger>] msg`, or `[ lua ] msg` for the `scripting` logger
+/// `[CET:<logger>] msg`, `[ lua ] msg` for the `scripting` logger,
+/// `🌱 [ lua ] msg` for `main`'s info lines (CET's lifecycle, at debug like yap's own)
 fn log(msg: &LogMsg) {
     let Some(payload) = message(msg.payload.as_bytes()) else {
         return;
     };
     let logger = String::from_utf8_lossy(msg.logger_name.as_bytes());
     let (grey, blue, reset) = (ftlog::color(), cet::color(), cet::reset());
-    let tag = if logger == SCRIPTING {
+    let tag = if logger == SCRIPTING || logger == MAIN {
         format!("{blue}[ lua ]{reset}")
     } else {
         format!("[{grey}{TAG}{reset}:{blue}{logger}{reset}]")
@@ -117,6 +120,7 @@ fn log(msg: &LogMsg) {
     match msg.level {
         TRACE => cet::trace!("{tag} {payload}"),
         DEBUG => cet::debug!("{tag} {payload}"),
+        INFO if logger == MAIN => cet::life!("{tag} {payload}"),
         INFO => cet::pipe!("{tag} {payload}"),
         WARN => cet::warn!("{tag} {payload}"),
         // `err`, `critical`
