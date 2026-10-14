@@ -101,7 +101,7 @@ unsafe extern "C" fn detour(
 
             frame.restore_args(state);
         }
-        cb(i, f, a3, a4)
+        super::cet::forwarding(|| cb(i, f, a3, a4))
     }
 }
 

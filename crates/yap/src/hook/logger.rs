@@ -1,4 +1,5 @@
 use super::ftlog::FTLOG_HASH;
+use super::pe::{image_range, module_base};
 use crate::config::{self, enabled};
 use crate::log::{
     ext::{color, reset},
@@ -80,13 +81,6 @@ const LEGACY_WIDE_SPECIFIERS: u64 = 4;
 /// what MSVC's `vsnprintf` / `_vsnwprintf` pass by default
 const PRINTF_OPTIONS: u64 = STANDARD_SNPRINTF_BEHAVIOR | LEGACY_WIDE_SPECIFIERS;
 const WIDE_STRING_FMT: &U16CStr = wcstr!("%ls");
-
-/// `IMAGE_DOS_HEADER::e_lfanew`: offset of the `IMAGE_NT_HEADERS64`
-const IMAGE_DOS_E_LFANEW: usize = 0x3C;
-/// `IMAGE_NT_HEADERS64::OptionalHeader`, after `Signature` (4) and `IMAGE_FILE_HEADER` (0x14)
-const IMAGE_NT_OPTIONAL_HEADER: usize = 0x18;
-/// `IMAGE_OPTIONAL_HEADER64::SizeOfImage`
-const IMAGE_OPTIONAL_SIZE_OF_IMAGE: usize = 0x38;
 
 /// `(entry index, address)` of every detoured [`ENTRIES`]
 static ATTACHED: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
@@ -212,14 +206,6 @@ fn plugin_name(handle: VoidPtr) -> Option<String> {
     let mut info = PluginInfo::default();
     unsafe { query(&mut info) };
     (!info.name.is_null()).then(|| unsafe { U16CStr::from_ptr_str(info.name) }.to_string_lossy())
-}
-
-/// base address (`HMODULE`) of a module already loaded in the process, e.g. `RED4ext.dll`
-fn module_base(name: &str) -> Result<usize, libloading::Error> {
-    let base = Library::open_already_loaded(name)?.into_raw() as usize;
-    // balance the refcount taken by open_already_loaded
-    drop(unsafe { Library::from_raw(base as _) });
-    Ok(base)
 }
 
 fn module_path(handle: VoidPtr) -> Option<PathBuf> {
@@ -488,17 +474,6 @@ taps! {
     config::WARN, "Warn": warn, warn_f, warn_w, warn_wf;
     config::ERROR, "Error": error, error_f, error_w, error_wf;
     config::CRITICAL, "Critical": critical, critical_f, critical_w, critical_wf;
-}
-
-/// address range of the module image in memory, read from its PE headers
-fn image_range(base: usize) -> Range<usize> {
-    let size = unsafe {
-        let e_lfanew = ((base + IMAGE_DOS_E_LFANEW) as *const u32).read_unaligned() as usize;
-        let size_of_image =
-            base + e_lfanew + IMAGE_NT_OPTIONAL_HEADER + IMAGE_OPTIONAL_SIZE_OF_IMAGE;
-        (size_of_image as *const u32).read_unaligned() as usize
-    };
-    base..base + size
 }
 
 /// [`SdkEnv`] keeps `{ handle, sdk: Sdk }` private and rustc decides the order of both fields:

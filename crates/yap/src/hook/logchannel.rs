@@ -130,7 +130,7 @@ unsafe extern "C" fn detour_shared(
 ) {
     unsafe {
         capture(f, SHARED);
-        cb(i, f, a3, a4)
+        super::cet::forwarding(|| cb(i, f, a3, a4))
     }
 }
 
@@ -143,7 +143,7 @@ unsafe extern "C" fn detour_warning(
 ) {
     unsafe {
         capture(f, WARNING);
-        cb(i, f, a3, a4)
+        super::cet::forwarding(|| cb(i, f, a3, a4))
     }
 }
 

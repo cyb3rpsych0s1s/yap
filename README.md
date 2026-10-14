@@ -48,6 +48,8 @@ This plugin comes in 2 flavors.
   (e.g. Codeware's `Red::Log::Debug`), prefixed with `[LogChannel:<channel>] [<module>.<class>::<func>] …`.
 - [x] captures every RED4ext plugin's log lines
   prefixed with `[<plugin>] …`.
+- [x] captures every [Cyber Engine Tweaks][cet] log line (mods' `print`, `spdlog.*` and Lua errors, the console, CET itself)
+  prefixed with `[CET:<logger>] …`, where `<logger>` is the mod's name, `scripting` or `main`.
 
 See details below.
 
@@ -160,6 +162,16 @@ At the matching level: `LogChannel` as info, `LogChannelWarning` as warning (�
 [2026-10-09 18:13:07.445] [info    ] [ 60776] [yap] [cat] 🔷 [ red4 ] clear registry
 ```
 
+### from CET mods (hooks)
+
+At the matching level: `spdlog.trace` / `debug` / `info` / `warning` / `error` / `critical` (the last two as 🔴), and `print` as info.
+The game's `FTLog` / `LogChannel*` lines CET copies to its `gamelog.log` aren't repeated.
+
+```text
+[yap] [CET:scripting] hi
+[yap] 🔴 [CET:my_mod] [string "init.lua"]:12: attempt to index a nil value
+```
+
 ### from yap itself
 
 ```text
@@ -177,6 +189,7 @@ They are also colored, with ANSI escape codes:
 | `[FTLog]`, `LogChannel`, `Class::Func` caller | grey |
 | `<channel>` (in `[LogChannel:<channel>]`) | cyan |
 | `[<plugin>]` | purple |
+| `<logger>` (in `[CET:<logger>]`) | blue |
 
 To opt out, create `<game>/red4ext/plugins/yap/config.ini` with:
 
@@ -228,3 +241,4 @@ if the game isn't in Steam's default folder.
 [wopss]: https://github.com/WopsS
 [jekky]: https://github.com/jac3km4
 [psiberx]: https://github.com/psiberx
+[cet]: https://github.com/maximegmd/CyberEngineTweaks

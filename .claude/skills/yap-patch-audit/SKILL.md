@@ -22,6 +22,8 @@ Update this table after every successful fix.
 | FTLog address hash | `0xCDF52009` = `3455393801`, DB entry offset `0001:00f5ffe4` → `0x140F60FE4` |
 | LogChannel / LogChannelError address hashes (one shared native) | `0xB7C91CD0` = `3083410640`, `0x63201EDA` = `1663049434`, DB entry offset `0001:00d269d8` → `0x140D279D8` |
 | LogChannelWarning address hash | `0xA9621FA6` = `2841780134`, DB entry offset `0001:0205473c` → `0x14205573C` |
+| Cyber Engine Tweaks | 1.37.1 (`bin/x64/plugins/cyber_engine_tweaks.asi`), statically linked spdlog **1.11.0** (`add_requires` in CET's `xmake.lua`) |
+| CET `spdlog::logger` vtable | 4 slots, `sink_it_` = slot 2, `flush_` = slot 3 (RVA `0x6131E0`, `sink_it_` `0x19070` in 1.37.1); `log_msg::level` at `0x10`, `payload` at `0x50` |
 
 ## What yap hooks
 
@@ -30,6 +32,8 @@ Update this table after every successful fix.
 | `crates/yap/src/hook/ftlog.rs` (**`hook` feature**) | Detours the **game's** native `FTLog` (by address hash) and reads its `script_ref<String>` argument straight from script bytecode to log `Class::Func msg` | game exe, script VM, red4ext-rs `StackFrame` API |
 | `crates/yap/src/hook/logchannel.rs` (**`hook` feature**) | Detours the **game's** natives `LogChannel`, `LogChannelWarning` and `LogChannelError(channel: CName, text: script_ref<String>)` (by address hash, 2 hooks: `LogChannel` and `LogChannelError` share one native, told apart by the callee's name) and logs `[LogChannel:<channel>] Class::Func msg` as info / warn / error (the level tells the three apart). Reuses `ftlog.rs`'s bytecode helpers | game exe, script VM, red4ext-rs `StackFrame` API |
 | `crates/yap/src/hook/logger.rs` (**`hook` feature**) | Detours all 24 entries of **RED4ext's** `v1::Logger` table, mirrors other plugins' lines into yap's log as `[<plugin>] msg` (purple), skips levels filtered by `red4ext/config.ini` | RED4ext.dll + SDK v1 layouts, red4ext-rs private layout, UCRT, kernel32, `c_variadic` |
+| `crates/yap/src/hook/cet.rs` (**`hook` feature**) | Detours **CET's** statically linked `spdlog::logger::sink_it_`, found through MSVC RTTI (`.?AVlogger@spdlog@@` TypeDescriptor → CompleteObjectLocator → vtable slot 2), and mirrors every logger's line (`main`, `scripting`, `gamelog`, one per mod) as `[CET:<logger>] msg` (blue) at the spdlog level. Skips lines written while yap's `FTLog`/`LogChannel*` detours forward to the original (CET hooks those natives too and copies them to `gamelog`/`scripting`): a `FORWARDING` thread-local set by `cet::forwarding` | CET's `.asi` with RTTI, spdlog 1.11 `logger` vtable and `log_msg` layout |
+| `crates/yap/src/hook/pe.rs` (**`hook` feature**) | PE helpers shared by `logger.rs` and `cet.rs`: `module_base`, `image_range`, `section` | PE format |
 | `crates/yap/reds/Log.reds` | Declares the public script API: `Yap.Life/Trace/Debug/Info/Warn/Error(msg: String)` natives (no `Critical`) | `src/lib.rs` exports |
 | `crates/yap/reds/Debug.reds` | Debug harness: `YapService` / `YapSystem`, `Session/*` callbacks, calls `FTLog`, `LogChannel`, `LogChannelWarning`, `LogChannelError` and Codeware's `Print` / `ModLog` (which call `LogChannel` natively, exercising the native-caller path) with `"WaWaWaWa"` as a smoke test, reports via `Life` | Codeware, game script API, `Log.reds` |
 | `crates/yap/reds/DebugNatives.reds` | Root-namespace (no `module`) re-declarations of the game's `LogChannel*(channel: CName, text: script_ref<String>)` natives, which redscript needs before `Debug.reds` can call them. Debug only: `just ci` → `just no-debug` strips every `Debug*.reds` from releases, so they never clash with another mod's declarations | game script API |
@@ -51,9 +55,10 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 5. `RED4ext log level: <Level> (<game>\red4ext\config.ini)` (the path only at `debug`/`trace`)
 6. *(trace)* `Logger table 0x… (Sdk at SdkEnv word #1)` (word #0 is also valid)
 7. `attached 24/24 Logger hooks, skipped: []`
+7b. *(trace)* `cyber_engine_tweaks.asi at 0x…, spdlog::logger vtable 0x…, sink_it_ 0x…`, then `attached native internal hook for CET spdlog::logger::sink_it_` (or `cyber_engine_tweaks.asi not loaded, … not hooked` without CET)
 8. Self-test: `self-test <Entry>` for every entry at or above the configured level, with `F`/`WF` ones reading `…: answer = 42`
 9. Later: `🪝 Yap.YapService::OnLoad WaWaWaWa`, `🌱 [ reds ] Session/*`, and mirrored `[<plugin>] …` lines from any other installed RED4ext plugin (e.g. `[cat] …`, `[octopak] …`)
-10. On exit: `detached 24/24 Logger hooks`, `detached native internal hook for LogChannelWarning`, `… for LogChannel/LogChannelError`, `detached native internal hook for FTLog`
+10. On exit: `detached native internal hook for CET spdlog::logger::sink_it_`, `detached 24/24 Logger hooks`, `detached native internal hook for LogChannelWarning`, `… for LogChannel/LogChannelError`, `detached native internal hook for FTLog`
 
 | Symptom | Go to |
 |---|---|
@@ -185,6 +190,22 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 ### C3. `export_plugin_symbols!` / `Plugin` trait
 - **Check:** `crates/yap/src/lib.rs` compiles, and `Query`/`Main`/`Supports` are still exported.
 
+## E. Cyber Engine Tweaks update (`cet.rs`)
+
+### E1. RTTI walk: `find_sink_it`
+- **Assumes:** CET is still built with RTTI, its `spdlog::logger` has a single CompleteObjectLocator (`signature == 1`, `offset == 0`), and the sections are named `.text` / `.rdata` / `.data`.
+- **Check:** the warning `unable to locate CET spdlog::logger::sink_it_ in cyber_engine_tweaks.asi: <step>` names the step that failed. `grep -c -a '.?AVlogger@spdlog@@' cyber_engine_tweaks.asi` must be 1.
+- **Fix:** if RTTI is gone, fall back to a byte pattern of `sink_it_` (it loops over `sinks_` at `this+0x28..0x30`, compares `msg+0x10` with each sink's level, then calls `vtable[3]` unless `flush_level_` is `off`).
+
+### E2. spdlog version: `SINK_IT_SLOT`, `LogMsg`
+- **Assumes:** spdlog 1.11's `logger` virtuals (`~logger`, `clone`, `sink_it_`, `flush_`) and `details::log_msg` layout (`logger_name`, `level`, `time`, `thread_id`, `color_range_*`, `source`, `payload`). The `offset_of!` asserts in `cet.rs` pin the offsets.
+- **Check:** the `spdlog` version in CET's `xmake.lua`, then `spdlog/logger.h` and `spdlog/details/log_msg.h` at that tag. Disassemble `vtable[2]` (`llvm-objdump -d --start-address=…`) and check the shape described in E1.
+- **Fix:** update the slots, `LogMsg` and the asserts.
+
+### E3. CET's own `FTLog`/`LogChannel*` hooks
+- **Assumes:** CET (MinHook, at `DLL_PROCESS_ATTACH`) hooks those natives before yap does, so yap's detours run first and the `gamelog` copies are written inside `cet::forwarding`.
+- **Check:** `Debug.reds`'s `WaWaWaWa` lines appear once, without a `[CET:gamelog]` copy. If only `[CET:gamelog]` copies appear, CET's detour runs first and never calls the original, so yap's own `FTLog`/`LogChannel*` hooks see nothing.
+
 ## D. Toolchain and OS
 
 ### D1. `c_variadic`
@@ -215,4 +236,5 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 4b. Optional diagnostic run: set `level = "trace"`, relaunch, and check that the *(trace)* lines 3, 4 (`equal: true`) and 6 appear. Then restore the previous value.
 5. Any other plugin's own log (e.g. `just log cat`) shows its lines unchanged, without a prefix.
 5b. The script API works: the lines from `Debug.reds` (via `Yap.Life`) appear with their caller, like FTLog lines: `🌱 [ reds ] Yap.YapService::OnLoad Service/OnLoad`, `… Yap.YapService::OnSession Session/Start`, `… Yap.YapSystem::OnAttach System/OnAttach`. A test call to `Yap.Info` / `Warn` / `Error` lands at `[info]` / `[warning]` / `[error]`, and in a release build `Yap.Debug` / `Life` still appear when `level = "debug"`.
+5c. With CET installed: `print("hi")` in the CET console gives `[CET:scripting] hi`, a mod's `spdlog.error("x")` gives a 🔴 `[CET:<mod>] x`, and the `WaWaWaWa` smoke lines have no `[CET:gamelog]` copy.
 6. Quit to desktop and check that `detached 24/24 Logger hooks`, the `LogChannel*` and `detached native internal hook for FTLog` lines appear, with no crash.
