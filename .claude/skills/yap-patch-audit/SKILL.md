@@ -88,7 +88,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 - **Fix:** find the new hash of the function the game registers as the native of global `FTLog`:
   - Enumerate RTTI at `post_register`: the global function named `FTLog` (`RttiSystem::get()` → global functions) holds its native handler pointer. Convert that pointer to `offset = addr - base - 0x1000` and search the JSON for that `"offset": "0001:<hex>"`. That gives the new `hash`.
   - Optionally switch `ftlog.rs` to resolve the target **from RTTI** instead of a hash, which makes it patch-proof. Keep the hash path as a fallback.
-  - Update `FTLOG_HASH` and its `// 0x… (2.31)` comment. `logger.rs` reuses it only for the `RED4ext_ResolveAddress` equality log.
+  - Update `FTLOG_HASH` but not its `// 0x… (2.31)` comment. `logger.rs` reuses it only for the `RED4ext_ResolveAddress` equality log.
 - **Guard:** if the hash resolves to `0`, `target()` returns `None`, and `attach_hook` logs `unable to resolve FTLog (0xCDF52009), not hooked` instead of hooking address 0. If RED4ext itself aborts on an unknown hash, the game crashes before that guard runs (see the triage row "crashes right after `Plugin/OnLoad`").
 
 ### A2. Native function signature: `type Native` in `ftlog.rs`
@@ -122,7 +122,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
   - For native callers the level comes from the frame's function name (`config::func`), which is null under `Execute`, so it falls back to `LogChannel` (info).
   - Native callers (`Function::Execute`, e.g. Codeware's `Print` / `ModLog`) run on a frame whose `func` is **null**. red4ext-rs's `StackFrame::func()` doesn't check for that, so every read goes through `config::func` (word 1 of `CStackFrame`, after `code`).
 - **Check:** same as A1 for the hashes (`grep -o '{"hash": "3083410640"[^}]*}'` …): the `LogChannel*` entries have no symbol name either. Find the new native through RTTI (`get_function(CName::new("LogChannel"))`'s native handler), like A1. Use the `Debug.reds` smoke lines for the levels and the script path, and any Codeware-based plugin for the native path.
-- **Fix:** update the hashes and their `// 0x… (2.31)` comments, `Channel` names or levels, or the argument reads in `capture`. If the natives' signatures change, update `crates/yap/reds/DebugNatives.reds` too.
+- **Fix:** update the hashes (not their `// 0x… (2.31)` comments), `Channel` names or levels, or the argument reads in `capture`. If the natives' signatures change, update `crates/yap/reds/DebugNatives.reds` too.
 
 ## B. RED4ext update (usually shipped right after a game patch)
 
@@ -225,7 +225,7 @@ Expected `yap-*.log` start, in order, with `level = "debug"` (the self-test need
 1. **Never crash the game.** Every failed assumption must turn into a `red4::warn!` plus a skip or a pass-through to the original function. Never call `unwrap` on something a patch can change.
 2. **Never log from inside a `logger.rs` detour.** Every `red4::*` macro goes back through the `Logger` table. The detours call `cb` / `TARGET` only, and the `Guard` thread-local stops double mirroring.
 3. Keep the original call path working: plain and wide entries forward the original pointer. `F`/`WF` must forward the **formatted** text as `"%s"` / `L"%ls"`, because the `...` arguments can't be forwarded as they are.
-4. Update the version comments (e.g. `// 0x140F60FE4 (2.31)`) and the **Baseline** table above.
+4. Only update the version hashes, not their comments (e.g. `// 0x140F60FE4 (2.31)`) and the **Baseline** table above.
 
 ## Verification checklist
 
