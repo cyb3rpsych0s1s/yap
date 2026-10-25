@@ -222,7 +222,7 @@ if the game isn't in Steam's default folder.
   and [redscript][redscript].
 - [@psiberx][psiberx]: author of [codeware][codeware] and other libraries.
 
-[patch-badge]: https://img.shields.io/badge/Cyberpunk_2077-patch_2.31-yellow
+[patch-badge]: https://img.shields.io/badge/Cyberpunk_2077-patch_2.5-yellow
 [nexus-badge]: https://img.shields.io/badge/Nexus-Yap-orange
 [download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download&color=blue
 [release-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/release.yml/badge.svg
