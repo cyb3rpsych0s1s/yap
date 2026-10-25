@@ -65,9 +65,9 @@ macro_rules! script_log {
             types::{IScriptable, RedString, StackFrame},
         };
 
-        unsafe extern "C" fn native_impl<'a, 'b>(
+        unsafe extern "C" fn native_impl(
             _: *mut IScriptable,
-            frame: &'b mut StackFrame,
+            frame: &mut StackFrame,
             _: VoidPtr,
             _: i64,
         ) {
