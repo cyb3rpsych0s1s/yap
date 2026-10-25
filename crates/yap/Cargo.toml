@@ -17,7 +17,7 @@ plugin = []
 
 [dependencies]
 libloading = { version = "0.9", optional = true }
-red4ext-rs = { git = "https://github.com/Roms1383/red4ext-rs", rev = "21591beba02c34f994944b6ef5849d10e7fd845c", features = ["log"] }
+red4ext-rs = { git = "https://github.com/jac3km4/red4ext-rs", tag = "v0.11.0", features = ["log"] }
 
 [build-dependencies]
 semver = "1.0"
