@@ -227,7 +227,7 @@ if the game isn't in Steam's default folder.
 [download-badge]: https://img.shields.io/github/v/release/cyb3rpsych0s1s/yap?display_name=tag&label=Download&color=blue
 [release-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/release.yml/badge.svg
 [build-badge]: https://github.com/cyb3rpsych0s1s/yap/actions/workflows/quality.yml/badge.svg
-[log-command]: https://github.com/cyb3rpsych0s1s/yap/blob/main/justfile#L82-L102
+[log-command]: https://github.com/cyb3rpsych0s1s/yap/blob/main/justfile#L102-L122
 [download]: https://github.com/cyb3rpsych0s1s/yap/releases/latest
 [actions]: https://github.com/cyb3rpsych0s1s/yap/actions
 [cyberpunk]: https://www.cyberpunk.net/us/en/
