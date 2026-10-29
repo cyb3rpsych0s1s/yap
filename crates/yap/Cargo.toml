@@ -17,7 +17,7 @@ plugin = []
 
 [dependencies]
 libloading = { version = "0.9", optional = true }
-red4ext-rs = { git = "https://github.com/jac3km4/red4ext-rs", rev = "e29eac83de1d1f8623bd9ff59bd176f814334a3d", features = ["log"] }
+red4ext-rs = { git = "https://github.com/jac3km4/red4ext-rs", rev = "1ea91e760c0626245449f21e184e9f860b943c48", features = ["log"] }
 
 [build-dependencies]
 semver = "1.0"
